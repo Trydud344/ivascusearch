@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>
+            OmniSearch Images - {{query}}
+        </title>
+        <link rel="stylesheet" href="static/main.css">
+    </head>
+    
+    <body class="images-view">
+        <header>
+            <h1>
+                Omni<span>Search</span>
+            </h1>
+            <form action="/images" method="GET" class="search-form">
+                <input name="q" autocomplete="off"="text" class="search-box" placeholder="Search for images..."
+                value="{{query}}">
+            </form>
+        </header>
+        <nav class="nav-tabs">
+            <div class="nav-container">
+                <a href="/search?q={{query}}">
+                    All
+                </a>
+                <a href="/images?q={{query}}" class="active">
+                    Images
+                </a>
+            </div>
+        </nav>
+        <main class="image-results-container">
+            <div class="image-grid">
+                {{for img in images}}
+                <div class="image-card">
+                    <div class="image-wrapper">
+                        <img src="{{img[0]}}" alt="{{img[1]}}" loading="lazy">
+                        <div class="image-overlay">
+                            <div class="overlay-buttons">
+                                <a href="{{img[3]}}" target="_blank" class="overlay-btn primary">
+                                    View Image
+                                </a>
+                                <a href="{{img[2]}}" target="_blank" class="overlay-btn secondary">
+                                    Visit Site
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{img[2]}}" target="_blank" class="image-link">
+                        <div class="image-info">
+                            <span class="image-caption">
+                                {{img[1]}}
+                            </span>
+                            <span class="image-source">
+                                {{img[2]}}
+                            </span>
+                        </div>
+                    </a>
+                </div>
+                {{endfor}}
+            </div>
+        </main>
+    </body>
+
+</html>
