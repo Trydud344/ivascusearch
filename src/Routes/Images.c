@@ -119,11 +119,9 @@ int images_handler(UrlParams *params) {
   int first = (page - 1) * 32 + 1;
   snprintf(url, sizeof(url),
            "https://www.bing.com/images/search?q=%s&first=%d", encoded_query, first);
-  fprintf(stderr, "[DEBUG] Fetching URL: %s\n", url);
 
   char *html = fetch_images_html(url);
   if (!html) {
-    fprintf(stderr, "[DEBUG] Failed to fetch HTML\n");
     send_response("<h1>Error fetching images</h1>");
     free(encoded_query);
     free(display_query);
@@ -161,7 +159,6 @@ int images_handler(UrlParams *params) {
 
   if (xpathObj && xpathObj->nodesetval) {
     int nodes = xpathObj->nodesetval->nodeNr;
-    fprintf(stderr, "[DEBUG] Found %d image items\n", nodes);
 
     int max_images = (nodes < 32) ? nodes : 32;
     image_matrix = malloc(sizeof(char **) * max_images);
@@ -232,12 +229,6 @@ int images_handler(UrlParams *params) {
       xmlChar *full_url = thumb_link ? xmlGetProp(thumb_link, (const xmlChar *)"href") : NULL;
       xmlChar *title = des_node ? xmlNodeGetContent(des_node) : (tit_node ? xmlNodeGetContent(tit_node) : NULL);
       xmlChar *rurl = tit_node ? xmlGetProp(tit_node, (const xmlChar *)"href") : NULL;
-
-      fprintf(stderr, "[DEBUG] Image %d: thumb=%s, full=%s, title=%s, site=%s\n",
-              image_count, iurl ? (char *)iurl : "nil",
-              full_url ? (char *)full_url : "nil",
-              title ? (char *)title : "nil",
-              rurl ? (char *)rurl : "nil");
 
       if (iurl && strlen((char *)iurl) > 0) {
         image_matrix[image_count] = malloc(sizeof(char *) * 4);
