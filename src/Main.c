@@ -7,6 +7,7 @@
 #include "Config.h"
 #include "Routes/Home.h"
 #include "Routes/Images.h"
+#include "Routes/ImageProxy.h"
 #include "Routes/Search.h"
 
 int handle_opensearch(UrlParams *params) {
@@ -31,6 +32,7 @@ int main() {
   set_handler("/opensearch.xml", handle_opensearch);
   set_handler("/search", results_handler);
   set_handler("/images", images_handler);
+  set_handler("/proxy", image_proxy_handler);
 
   fprintf(stderr, "Starting Omnisearch on %s:%d\n", config.host, config.port);
 

@@ -231,8 +231,23 @@ int images_handler(UrlParams *params) {
       xmlChar *rurl = tit_node ? xmlGetProp(tit_node, (const xmlChar *)"href") : NULL;
 
       if (iurl && strlen((char *)iurl) > 0) {
+        char *proxy_url = NULL;
+        CURL *esc_curl = curl_easy_init();
+        if (esc_curl) {
+          char *encoded = curl_easy_escape(esc_curl, (char *)iurl, 0);
+          if (encoded) {
+            size_t proxy_len = strlen("/proxy?url=") + strlen(encoded) + 1;
+            proxy_url = malloc(proxy_len);
+            if (proxy_url) {
+              snprintf(proxy_url, proxy_len, "/proxy?url=%s", encoded);
+            }
+            curl_free(encoded);
+          }
+          curl_easy_cleanup(esc_curl);
+        }
+
         image_matrix[image_count] = malloc(sizeof(char *) * 4);
-        image_matrix[image_count][0] = strdup((char *)iurl);
+        image_matrix[image_count][0] = proxy_url ? proxy_url : strdup((char *)iurl);
         image_matrix[image_count][1] = strdup(title ? (char *)title : "Image");
         image_matrix[image_count][2] = strdup(rurl ? (char *)rurl : "#");
         image_matrix[image_count][3] = strdup(full_url ? (char *)full_url : "#");
