@@ -60,6 +60,15 @@
                 </div>
                 {{endfor}}
             </div>
+            <nav class="pagination">
+                <a class="pagination-btn prev" href="/images?q={{query}}&p={{prev_page}}">
+                    &larr; Page {{prev_page}}
+                </a>
+                <span class="pagination-current">Page {{page}}</span>
+                <a class="pagination-btn next" href="/images?q={{query}}&p={{next_page}}">
+                    Page {{next_page}} &rarr;
+                </a>
+            </nav>
         </main>
     </body>
 

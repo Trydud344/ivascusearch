@@ -65,15 +65,28 @@ static char *fetch_images_html(const char *url) {
 int images_handler(UrlParams *params) {
   TemplateContext ctx = new_context();
   char *raw_query = "";
+  int page = 1;
 
   if (params) {
     for (int i = 0; i < params->count; i++) {
       if (strcmp(params->params[i].key, "q") == 0) {
         raw_query = params->params[i].value;
-        break;
+      } else if (strcmp(params->params[i].key, "p") == 0) {
+        int parsed = atoi(params->params[i].value);
+        if (parsed > 1) page = parsed;
       }
     }
   }
+
+  context_set(&ctx, "query", raw_query);
+
+  char page_str[16], prev_str[16], next_str[16];
+  snprintf(page_str, sizeof(page_str), "%d", page);
+  snprintf(prev_str, sizeof(prev_str), "%d", page > 1 ? page - 1 : 0);
+  snprintf(next_str, sizeof(next_str), "%d", page + 1);
+  context_set(&ctx, "page",      page_str);
+  context_set(&ctx, "prev_page", prev_str);
+  context_set(&ctx, "next_page", next_str);
 
   char *display_query = url_decode_query(raw_query);
   context_set(&ctx, "query", display_query);
@@ -103,8 +116,9 @@ int images_handler(UrlParams *params) {
   }
 
   char url[1024];
+  int first = (page - 1) * 32 + 1;
   snprintf(url, sizeof(url),
-           "https://www.bing.com/images/search?q=%s", encoded_query);
+           "https://www.bing.com/images/search?q=%s&first=%d", encoded_query, first);
   fprintf(stderr, "[DEBUG] Fetching URL: %s\n", url);
 
   char *html = fetch_images_html(url);
