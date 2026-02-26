@@ -49,7 +49,7 @@ static int is_calculator_query(const char *query) {
     }
   }
 
-  return has_digit && (has_operator || strchr(query, '.'));
+  return has_digit && has_operator;
 }
 
 static void *calc_thread_func(void *arg) {
