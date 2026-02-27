@@ -1,5 +1,5 @@
 #include "ImageProxy.h"
-
+#include "../Proxy/Proxy.h"
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,6 +118,7 @@ int image_proxy_handler(UrlParams *params) {
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+  apply_proxy_settings(curl);
 
   CURLcode res = curl_easy_perform(curl);
 

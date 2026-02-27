@@ -1,4 +1,6 @@
 #include "Wikipedia.h"
+#include "../Proxy/Proxy.h"
+#include "../Scraping/Scraping.h"
 #include <curl/curl.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -123,6 +125,7 @@ InfoBox fetch_wiki_data(char *api_url) {
                      WikiWriteMemoryCallback);
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
     curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+    apply_proxy_settings(curl_handle);
 
     res = curl_easy_perform(curl_handle);
 

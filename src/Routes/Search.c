@@ -88,10 +88,10 @@ static int add_infobox_to_collection(InfoBox *infobox, char ****collection,
       (int *)realloc(*inner_counts, sizeof(int) * (current_count + 1));
 
   (*collection)[current_count] = (char **)malloc(sizeof(char *) * 4);
-  (*collection)[current_count][0] = infobox->title;
-  (*collection)[current_count][1] = infobox->thumbnail_url;
-  (*collection)[current_count][2] = infobox->extract;
-  (*collection)[current_count][3] = infobox->url;
+  (*collection)[current_count][0] = infobox->title ? strdup(infobox->title) : NULL;
+  (*collection)[current_count][1] = infobox->thumbnail_url ? strdup(infobox->thumbnail_url) : NULL;
+  (*collection)[current_count][2] = infobox->extract ? strdup(infobox->extract) : NULL;
+  (*collection)[current_count][3] = infobox->url ? strdup(infobox->url) : NULL;
   (*inner_counts)[current_count] = 4;
 
   return current_count + 1;
@@ -151,6 +151,10 @@ int results_handler(UrlParams *params) {
     jobs[i].max_results = 10;
     jobs[i].results_count = 0;
     jobs[i].page = page;
+    jobs[i].handle = NULL;
+    jobs[i].response.memory = NULL;
+    jobs[i].response.size = 0;
+    jobs[i].response.capacity = 0;
   }
 
   scrape_engines_parallel(jobs, ENGINE_COUNT);
@@ -185,6 +189,10 @@ int results_handler(UrlParams *params) {
   if (infobox_count > 0) {
     context_set_array_of_arrays(&ctx, "infoboxes", infobox_matrix,
                                 infobox_count, infobox_inner_counts);
+    for (int i = 0; i < infobox_count; i++) {
+      for (int j = 0; j < 4; j++) free(infobox_matrix[i][j]);
+      free(infobox_matrix[i]);
+    }
     free(infobox_matrix);
     free(infobox_inner_counts);
   }

@@ -1,4 +1,6 @@
 #include "Dictionary.h"
+#include "../Proxy/Proxy.h"
+#include "../Scraping/Scraping.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
 #include <libxml/xpath.h>
@@ -216,6 +218,7 @@ InfoBox fetch_dictionary_data(const char *query) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    apply_proxy_settings(curl);
 
     if (curl_easy_perform(curl) == CURLE_OK && chunk.size > 0) {
         htmlDocPtr doc = htmlReadMemory(chunk.memory, chunk.size, url, NULL,

@@ -1,5 +1,7 @@
 #include "Images.h"
 #include "../Utility/Unescape.h"
+#include "../Proxy/Proxy.h"
+#include "../Scraping/Scraping.h"
 
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
@@ -50,6 +52,7 @@ static char *fetch_images_html(const char *url) {
       "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
   curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10L);
+  apply_proxy_settings(curl_handle);
 
   CURLcode res = curl_easy_perform(curl_handle);
   if (res != CURLE_OK) {
@@ -247,7 +250,7 @@ int images_handler(UrlParams *params) {
         }
 
         image_matrix[image_count] = malloc(sizeof(char *) * 4);
-        image_matrix[image_count][0] = proxy_url ? proxy_url : strdup((char *)iurl);
+        image_matrix[image_count][0] = proxy_url ? strdup(proxy_url) : strdup((char *)iurl);
         image_matrix[image_count][1] = strdup(title ? (char *)title : "Image");
         image_matrix[image_count][2] = strdup(rurl ? (char *)rurl : "#");
         image_matrix[image_count][3] = strdup(full_url ? (char *)full_url : "#");

@@ -1,4 +1,5 @@
 #include "Scraping.h"
+#include "../Proxy/Proxy.h"
 #include "../Utility/Unescape.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
@@ -329,9 +330,14 @@ static void configure_curl_handle(CURL *curl, const char *full_url,
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
   curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
+
+  apply_proxy_settings(curl);
 }
 
 int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
+  int retries = 0;
+
+retry:
   CURLM *multi_handle = curl_multi_init();
   if (!multi_handle) {
     return -1;
@@ -339,6 +345,15 @@ int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
 
   for (int i = 0; i < num_jobs; i++) {
     ScrapeJob *job = &jobs[i];
+
+    if (job->handle) {
+      curl_easy_cleanup(job->handle);
+      job->handle = NULL;
+    }
+    if (job->response.memory) {
+      free(job->response.memory);
+    }
+
     job->handle = curl_easy_init();
     if (!job->handle) {
       continue;
@@ -406,7 +421,7 @@ int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
       CURL *handle = msg->easy_handle;
 
       for (int i = 0; i < num_jobs; i++) {
-        if (jobs[i].handle == handle) {
+        if (jobs[i].handle && jobs[i].handle == handle) {
           ScrapeJob *job = &jobs[i];
 
           long response_code;
@@ -431,8 +446,10 @@ int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
           if (headers) curl_slist_free_all(headers);
 
           free(job->response.memory);
+          job->response.memory = NULL;
           curl_multi_remove_handle(multi_handle, handle);
-          curl_easy_cleanup(handle);
+          if (handle) curl_easy_cleanup(handle);
+          job->handle = NULL;
           break;
         }
       }
@@ -440,6 +457,21 @@ int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
   }
 
   curl_multi_cleanup(multi_handle);
+
+  if (retries < max_proxy_retries && proxy_count > 0) {
+    int any_failed = 0;
+    for (int i = 0; i < num_jobs; i++) {
+      if (jobs[i].results_count == 0 && jobs[i].response.size == 0) {
+        any_failed = 1;
+        break;
+      }
+    }
+    if (any_failed) {
+      retries++;
+      goto retry;
+    }
+  }
+
   return 0;
 }
 
