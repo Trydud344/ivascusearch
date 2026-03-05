@@ -11,7 +11,7 @@ typedef struct {
 } SearchResult;
 
 typedef int (*ParserFunc)(const char *engine_name, xmlDocPtr doc,
-                          SearchResult **out_results, int max_results);
+              SearchResult **out_results, int max_results);
 
 typedef struct {
   const char *name;
@@ -20,8 +20,8 @@ typedef struct {
   const char *referer;
 
   const char *page_param;
-  int         page_multiplier;
-  int         page_base;
+  int     page_multiplier;
+  int     page_base;
   ParserFunc parser;
 } SearchEngine;
 
@@ -36,7 +36,7 @@ typedef struct {
   char *query;
   SearchResult **out_results;
   int max_results;
-  int page;          
+  int page;      
   CURL *handle;
   MemoryBuffer response;
   int results_count;
@@ -46,7 +46,7 @@ extern const SearchEngine ENGINE_REGISTRY[];
 extern const int ENGINE_COUNT;
 
 int scrape_engine(const SearchEngine *engine, const char *query,
-                  SearchResult **out_results, int max_results);
+          SearchResult **out_results, int max_results);
 
 int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs);
 
