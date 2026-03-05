@@ -37,19 +37,49 @@ static int is_calculator_query(const char *query) {
   if (!query) return 0;
 
   int has_digit = 0;
-  int has_operator = 0;
+  int has_math_operator = 0;
 
   for (const char *p = query; *p; p++) {
     if (isdigit(*p) || *p == '.') {
       has_digit = 1;
     }
-    if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '=' ||
-        *p == '^') {
-      has_operator = 1;
+    if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '^') {
+      has_math_operator = 1;
     }
   }
 
-  return has_digit && has_operator;
+  if (!has_digit || !has_math_operator) return 0;
+
+  int len = strlen(query);
+  for (int i = 0; i < len; i++) {
+    char c = query[i];
+    if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^') {
+      int has_num_before = 0;
+      int has_num_after = 0;
+
+      for (int j = i - 1; j >= 0; j--) {
+        if (isdigit(query[j]) || query[j] == '.') {
+          has_num_before = 1;
+          break;
+        }
+        if (query[j] != ' ') break;
+      }
+
+      for (int j = i + 1; j < len; j++) {
+        if (isdigit(query[j]) || query[j] == '.') {
+          has_num_after = 1;
+          break;
+        }
+        if (query[j] != ' ') break;
+      }
+
+      if (has_num_before || has_num_after) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
 }
 
 static void *calc_thread_func(void *arg) {
