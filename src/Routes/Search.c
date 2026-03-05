@@ -2,6 +2,7 @@
 #include "../Infobox/Wikipedia.h"
 #include "../Infobox/Calculator.h"
 #include "../Infobox/Dictionary.h"
+#include "../Infobox/UnitConversion.h"
 #include "../Scraping/Scraping.h"
 #include "../Utility/Display.h"
 #include "../Utility/Unescape.h"
@@ -110,6 +111,20 @@ static void *dict_thread_func(void *arg) {
   return NULL;
 }
 
+static void *unit_thread_func(void *arg) {
+  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
+
+  if (is_unit_conv_query(data->query)) {
+    data->result = fetch_unit_conv_data(data->query);
+    data->success =
+        (data->result.title != NULL && data->result.extract != NULL);
+  } else {
+    data->success = 0;
+  }
+
+  return NULL;
+}
+
 static int add_infobox_to_collection(InfoBox *infobox, char ****collection,
                                      int **inner_counts, int current_count) {
   *collection =
@@ -159,15 +174,17 @@ int results_handler(UrlParams *params) {
     return -1;
   }
 
-  pthread_t wiki_tid, calc_tid, dict_tid;
+  pthread_t wiki_tid, calc_tid, dict_tid, unit_tid;
   InfoBoxThreadData wiki_data = {.query = raw_query, .success = 0};
   InfoBoxThreadData calc_data = {.query = raw_query, .success = 0};
   InfoBoxThreadData dict_data = {.query = raw_query, .success = 0};
+  InfoBoxThreadData unit_data = {.query = raw_query, .success = 0};
 
   if (page == 1) {
     pthread_create(&wiki_tid, NULL, wiki_thread_func, &wiki_data);
     pthread_create(&calc_tid, NULL, calc_thread_func, &calc_data);
     pthread_create(&dict_tid, NULL, dict_thread_func, &dict_data);
+    pthread_create(&unit_tid, NULL, unit_thread_func, &unit_data);
   }
 
   ScrapeJob jobs[ENGINE_COUNT];
@@ -193,6 +210,7 @@ int results_handler(UrlParams *params) {
     pthread_join(wiki_tid, NULL);
     pthread_join(calc_tid, NULL);
     pthread_join(dict_tid, NULL);
+    pthread_join(unit_tid, NULL);
   }
 
   char ***infobox_matrix = NULL;
@@ -207,6 +225,11 @@ int results_handler(UrlParams *params) {
 
     if (calc_data.success) {
       infobox_count = add_infobox_to_collection(&calc_data.result, &infobox_matrix,
+                                                &infobox_inner_counts, infobox_count);
+    }
+
+    if (unit_data.success) {
+      infobox_count = add_infobox_to_collection(&unit_data.result, &infobox_matrix,
                                                 &infobox_inner_counts, infobox_count);
     }
 
@@ -306,6 +329,7 @@ int results_handler(UrlParams *params) {
     if (wiki_data.success) free_infobox(&wiki_data.result);
     if (calc_data.success) free_infobox(&calc_data.result);
     if (dict_data.success) free_infobox(&dict_data.result);
+    if (unit_data.success) free_infobox(&unit_data.result);
   }
   free_context(&ctx);
 
