@@ -24,7 +24,8 @@ int load_config(const char *filename, Config *config) {
       char *end = strchr(line, ']');
       if (end) {
         *end = '\0';
-        snprintf(section, sizeof(section), "%.*s", (int)(sizeof(section) - 1), line + 1);
+        snprintf(section, sizeof(section), "%.*s", (int)(sizeof(section) - 1),
+                 line + 1);
         section[sizeof(section) - 1] = '\0';
       }
       continue;
@@ -36,8 +37,10 @@ int load_config(const char *filename, Config *config) {
       char *key = line;
       char *value = delimiter + 1;
 
-      while (*key == ' ' || *key == '\t') key++;
-      while (*value == ' ' || *value == '\t') value++;
+      while (*key == ' ' || *key == '\t')
+        key++;
+      while (*value == ' ' || *value == '\t')
+        value++;
 
       char *key_end = key + strlen(key) - 1;
       while (key_end > key && (*key_end == ' ' || *key_end == '\t')) {
@@ -46,12 +49,14 @@ int load_config(const char *filename, Config *config) {
       }
 
       char *value_end = value + strlen(value) - 1;
-      while (value_end > value && (*value_end == ' ' || *value_end == '\t' || *value_end == '"' || *value_end == '\'')) {
+      while (value_end > value && (*value_end == ' ' || *value_end == '\t' ||
+                                   *value_end == '"' || *value_end == '\'')) {
         *value_end = '\0';
         value_end--;
       }
 
-      while (*value == '"' || *value == '\'') value++;
+      while (*value == '"' || *value == '\'')
+        value++;
 
       if (strcmp(section, "server") == 0) {
         if (strcmp(key, "host") == 0) {
@@ -65,7 +70,8 @@ int load_config(const char *filename, Config *config) {
           strncpy(config->proxy, value, sizeof(config->proxy) - 1);
           config->proxy[sizeof(config->proxy) - 1] = '\0';
         } else if (strcmp(key, "list_file") == 0) {
-          strncpy(config->proxy_list_file, value, sizeof(config->proxy_list_file) - 1);
+          strncpy(config->proxy_list_file, value,
+                  sizeof(config->proxy_list_file) - 1);
           config->proxy_list_file[sizeof(config->proxy_list_file) - 1] = '\0';
         } else if (strcmp(key, "max_retries") == 0) {
           config->max_proxy_retries = atoi(value);

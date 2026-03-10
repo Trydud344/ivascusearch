@@ -5,7 +5,8 @@
 #include <strings.h>
 
 char *pretty_display_url(const char *input) {
-  if (!input) return NULL;
+  if (!input)
+    return NULL;
 
   const char *start = input;
 
@@ -28,7 +29,8 @@ char *pretty_display_url(const char *input) {
   }
 
   char *output = (char *)malloc(strlen(temp) * 3 + 1);
-  if (!output) return NULL;
+  if (!output)
+    return NULL;
 
   size_t j = 0;
   for (size_t i = 0; temp[i] != '\0'; i++) {

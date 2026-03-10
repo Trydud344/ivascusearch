@@ -4,7 +4,8 @@
 #include <string.h>
 
 char *unescape_search_url(const char *input) {
-  if (!input) return NULL;
+  if (!input)
+    return NULL;
 
   const char *key = NULL;
   const char *start = NULL;
@@ -14,7 +15,8 @@ char *unescape_search_url(const char *input) {
   if (strstr(input, "uddg=")) {
     key = "uddg=";
     start = strstr(input, key);
-    if (!start) return NULL;
+    if (!start)
+      return NULL;
     start += strlen(key);
     end = strchr(start, '&');
     len = end ? (size_t)(end - start) : strlen(start);
@@ -23,7 +25,8 @@ char *unescape_search_url(const char *input) {
   else if (strstr(input, "RU=")) {
     key = "RU=";
     start = strstr(input, key);
-    if (!start) return strdup(input);
+    if (!start)
+      return strdup(input);
     start += strlen(key);
     end = strchr(start, '/');
     len = end ? (size_t)(end - start) : strlen(start);
@@ -34,7 +37,8 @@ char *unescape_search_url(const char *input) {
   }
 
   char *output = (char *)malloc(len * 3 + 1);
-  if (!output) return NULL;
+  if (!output)
+    return NULL;
 
   size_t i = 0, j = 0;
   while (i < len) {
@@ -60,7 +64,8 @@ char *unescape_search_url(const char *input) {
 }
 
 char *url_decode_query(const char *src) {
-  if (!src) return NULL;
+  if (!src)
+    return NULL;
   char *res = strdup(src);
   char *p = res;
   while (*src) {
