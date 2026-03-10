@@ -10,7 +10,7 @@ else
     LDFLAGS :=
 endif
 
-LIBS    := -lbeaker -lcurl -lxml2 -lpthread -lm
+LIBS    := -lbeaker -lcurl -lxml2 -lpthread -lm -lssl -lcrypto
 
 SRC_DIR := src
 BIN_DIR := bin

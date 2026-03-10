@@ -1,4 +1,5 @@
 #include "Wikipedia.h"
+#include "../Cache/Cache.h"
 #include "../Proxy/Proxy.h"
 #include "../Scraping/Scraping.h"
 #include <curl/curl.h>
@@ -117,6 +118,32 @@ InfoBox fetch_wiki_data(char *api_url) {
   struct WikiMemoryStruct chunk;
   InfoBox info = {NULL, NULL, NULL, NULL};
 
+  if (!api_url) {
+    return info;
+  }
+
+  char *cache_key = cache_compute_key(api_url, 0, "wikipedia");
+  if (cache_key && get_cache_ttl_infobox() > 0) {
+    char *cached_data = NULL;
+    size_t cached_size = 0;
+    if (cache_get(cache_key, get_cache_ttl_infobox(), &cached_data,
+                  &cached_size) == 0 &&
+        cached_data && cached_size > 0) {
+      xmlDocPtr doc =
+          xmlReadMemory(cached_data, cached_size, "noname.xml", NULL, 0);
+      if (doc != NULL) {
+        xmlNode *root_element = xmlDocGetRootElement(doc);
+        extract_wiki_info(root_element, &info);
+        xmlFreeDoc(doc);
+      }
+      free(cached_data);
+      free(cache_key);
+      return info;
+    }
+    free(cached_data);
+  }
+  free(cache_key);
+
   chunk.memory = malloc(1);
   chunk.size = 0;
 
@@ -132,7 +159,13 @@ InfoBox fetch_wiki_data(char *api_url) {
 
     res = curl_easy_perform(curl_handle);
 
-    if (res == CURLE_OK) {
+    if (res == CURLE_OK && chunk.size > 0) {
+      cache_key = cache_compute_key(api_url, 0, "wikipedia");
+      if (cache_key && get_cache_ttl_infobox() > 0) {
+        cache_set(cache_key, chunk.memory, chunk.size);
+      }
+      free(cache_key);
+
       xmlDocPtr doc =
           xmlReadMemory(chunk.memory, chunk.size, "noname.xml", NULL, 0);
       if (doc != NULL) {

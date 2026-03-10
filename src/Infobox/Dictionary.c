@@ -1,4 +1,5 @@
 #include "Dictionary.h"
+#include "../Cache/Cache.h"
 #include "../Proxy/Proxy.h"
 #include "../Scraping/Scraping.h"
 #include <ctype.h>
@@ -266,6 +267,48 @@ InfoBox fetch_dictionary_data(const char *query) {
   if (!url)
     return info;
 
+  char *cache_key = cache_compute_key(url, 0, "dictionary");
+  if (cache_key && get_cache_ttl_infobox() > 0) {
+    char *cached_data = NULL;
+    size_t cached_size = 0;
+    if (cache_get(cache_key, (time_t)get_cache_ttl_infobox(), &cached_data,
+                  &cached_size) == 0 &&
+        cached_data && cached_size > 0) {
+      htmlDocPtr doc = htmlReadMemory(cached_data, cached_size, url, NULL,
+                                      HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
+                                          HTML_PARSE_NOWARNING);
+      if (doc) {
+        char *word = xpath_text(doc, "//span[@class='hw dhw']");
+        char *pron = xpath_text(
+            doc,
+            "//span[@class='us dpron-i']//span[@class='ipa dipa lpr-2 lpl-1']");
+        char *pos = xpath_text(doc, "//span[@class='pos dpos']");
+        char *def = xpath_text(doc, "(//div[@class='def ddef_d db'])[1]");
+        char *ex = xpath_text(doc, "(//span[@class='eg deg'])[1]");
+
+        if (word && def) {
+          info.title = strdup("Dictionary");
+          info.extract = build_html(word, pron, pos, def, ex);
+          info.thumbnail_url = strdup("/static/dictionary.jpg");
+          info.url = strdup(url);
+        }
+
+        free(word);
+        free(pron);
+        free(pos);
+        free(def);
+        free(ex);
+        xmlFreeDoc(doc);
+      }
+      free(cached_data);
+      free(cache_key);
+      free(url);
+      return info;
+    }
+    free(cached_data);
+  }
+  free(cache_key);
+
   CURL *curl = curl_easy_init();
   if (!curl) {
     free(url);
@@ -281,6 +324,12 @@ InfoBox fetch_dictionary_data(const char *query) {
   apply_proxy_settings(curl);
 
   if (curl_easy_perform(curl) == CURLE_OK && chunk.size > 0) {
+    cache_key = cache_compute_key(url, 0, "dictionary");
+    if (cache_key && get_cache_ttl_infobox() > 0) {
+      cache_set(cache_key, chunk.memory, chunk.size);
+    }
+    free(cache_key);
+
     htmlDocPtr doc = htmlReadMemory(chunk.memory, chunk.size, url, NULL,
                                     HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
                                         HTML_PARSE_NOWARNING);

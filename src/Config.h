@@ -9,6 +9,9 @@ typedef struct {
   int max_proxy_retries;
   int randomize_username;
   int randomize_password;
+  char cache_dir[512];
+  int cache_ttl_search;
+  int cache_ttl_infobox;
 } Config;
 
 int load_config(const char *filename, Config *config);

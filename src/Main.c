@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "Cache/Cache.h"
 #include "Config.h"
+#include "Infobox/Wikipedia.h"
 #include "Proxy/Proxy.h"
 #include "Routes/Home.h"
 #include "Routes/ImageProxy.h"
@@ -37,11 +39,26 @@ int main() {
                    .proxy_list_file = "",
                    .max_proxy_retries = 3,
                    .randomize_username = 0,
-                   .randomize_password = 0};
+                   .randomize_password = 0,
+                   .cache_dir = "/tmp/omnisearch_cache",
+                   .cache_ttl_search = 3600,
+                   .cache_ttl_infobox = 86400};
 
   if (load_config("config.ini", &config) != 0) {
     fprintf(stderr, "Warning: Could not load config file, using defaults\n");
   }
+
+  if (cache_init(config.cache_dir) != 0) {
+    fprintf(
+        stderr,
+        "Warning: Failed to initialize cache, continuing without caching\n");
+  } else {
+    fprintf(stderr, "Cache initialized at %s\n", config.cache_dir);
+    cache_cleanup(config.cache_ttl_search);
+  }
+
+  set_cache_ttl_search(config.cache_ttl_search);
+  set_cache_ttl_infobox(config.cache_ttl_infobox);
 
   if (config.proxy_list_file[0] != '\0') {
     if (load_proxy_list(config.proxy_list_file) < 0) {
@@ -82,5 +99,6 @@ int main() {
   curl_global_cleanup();
   xmlCleanupParser();
   free_proxy_list();
+  cache_shutdown();
   return EXIT_SUCCESS;
 }

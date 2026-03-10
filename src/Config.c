@@ -80,6 +80,15 @@ int load_config(const char *filename, Config *config) {
         } else if (strcmp(key, "randomize_password") == 0) {
           config->randomize_password = atoi(value);
         }
+      } else if (strcmp(section, "cache") == 0) {
+        if (strcmp(key, "dir") == 0) {
+          strncpy(config->cache_dir, value, sizeof(config->cache_dir) - 1);
+          config->cache_dir[sizeof(config->cache_dir) - 1] = '\0';
+        } else if (strcmp(key, "ttl_search") == 0) {
+          config->cache_ttl_search = atoi(value);
+        } else if (strcmp(key, "ttl_infobox") == 0) {
+          config->cache_ttl_infobox = atoi(value);
+        }
       }
     }
   }

@@ -1,4 +1,5 @@
 #include "Scraping.h"
+#include "../Cache/Cache.h"
 #include "../Proxy/Proxy.h"
 #include "../Utility/Unescape.h"
 #include <curl/curl.h>
@@ -368,6 +369,10 @@ retry:
   for (int i = 0; i < num_jobs; i++) {
     ScrapeJob *job = &jobs[i];
 
+    char cache_key[64];
+    char full_url[1024];
+    char *encoded_query = NULL;
+
     if (job->handle) {
       curl_easy_cleanup(job->handle);
       job->handle = NULL;
@@ -376,20 +381,8 @@ retry:
       free(job->response.memory);
     }
 
-    job->handle = curl_easy_init();
-    if (!job->handle) {
-      continue;
-    }
-
-    job->response.memory = (char *)malloc(16384);
-    job->response.size = 0;
-    job->response.capacity = 16384;
-
-    char full_url[1024];
-    char *encoded_query = curl_easy_escape(job->handle, job->query, 0);
+    encoded_query = curl_easy_escape(NULL, job->query, 0);
     if (!encoded_query) {
-      curl_easy_cleanup(job->handle);
-      job->handle = NULL;
       continue;
     }
 
@@ -399,7 +392,52 @@ retry:
 
     snprintf(full_url, sizeof(full_url), "%s%s&%s=%d", job->engine->base_url,
              encoded_query, job->engine->page_param, page_value);
-    curl_free(encoded_query);
+
+    char *key = cache_compute_key(job->query, job->page, job->engine->name);
+    if (key) {
+      strncpy(cache_key, key, sizeof(cache_key) - 1);
+      cache_key[sizeof(cache_key) - 1] = '\0';
+      free(key);
+    } else {
+      snprintf(cache_key, sizeof(cache_key), "uncached_%d_%s", i,
+               job->engine->name);
+    }
+
+    char *cached_data = NULL;
+    size_t cached_size = 0;
+    int cache_hit = 0;
+
+    if (get_cache_ttl_search() > 0 &&
+        cache_get(cache_key, (time_t)get_cache_ttl_search(), &cached_data,
+                  &cached_size) == 0 &&
+        cached_data && cached_size > 0) {
+      xmlDocPtr doc = htmlReadMemory(cached_data, cached_size, NULL, NULL,
+                                     HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
+                                         HTML_PARSE_NOWARNING);
+      if (doc) {
+        job->results_count = job->engine->parser(
+            job->engine->name, doc, job->out_results, job->max_results);
+        xmlFreeDoc(doc);
+        cache_hit = 1;
+      }
+      free(cached_data);
+    }
+
+    if (cache_hit) {
+      free(encoded_query);
+      job->results_count = job->results_count > 0 ? job->results_count : 0;
+      continue;
+    }
+
+    job->handle = curl_easy_init();
+    if (!job->handle) {
+      free(encoded_query);
+      continue;
+    }
+
+    job->response.memory = (char *)malloc(16384);
+    job->response.size = 0;
+    job->response.capacity = 16384;
 
     struct curl_slist *headers = NULL;
     char host_buf[256], ref_buf[256];
@@ -451,6 +489,13 @@ retry:
           curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response_code);
 
           if (msg->data.result == CURLE_OK && job->response.size > 0) {
+            char *key =
+                cache_compute_key(job->query, job->page, job->engine->name);
+            if (key && get_cache_ttl_search() > 0) {
+              cache_set(key, job->response.memory, job->response.size);
+              free(key);
+            }
+
             xmlDocPtr doc = htmlReadMemory(
                 job->response.memory, job->response.size, NULL, NULL,
                 HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
