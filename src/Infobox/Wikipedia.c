@@ -182,23 +182,110 @@ InfoBox fetch_wiki_data(char *api_url) {
   return info;
 }
 
-char *construct_wiki_url(const char *search_term) {
+static xmlNode *find_node_recursive(xmlNode *node, const char *target_name) {
+  for (xmlNode *cur = node; cur; cur = cur->next) {
+    if (cur->type == XML_ELEMENT_NODE && strcmp((const char *)cur->name, target_name) == 0) {
+      return cur;
+    }
+    xmlNode *found = find_node_recursive(cur->children, target_name);
+    if (found)
+      return found;
+  }
+  return NULL;
+}
+
+static char *get_first_search_result(const char *search_term) {
   CURL *curl = curl_easy_init();
   if (!curl)
     return NULL;
 
   char *escaped_term = curl_easy_escape(curl, search_term, 0);
+  const char *search_base =
+      "https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=";
+  const char *search_suffix =
+      "&format=xml&origin=*&srlimit=1";
+
+  char *search_url = malloc(strlen(search_base) + strlen(escaped_term) +
+                           strlen(search_suffix) + 1);
+  if (!search_url) {
+    curl_free(escaped_term);
+    curl_easy_cleanup(curl);
+    return NULL;
+  }
+
+  strcpy(search_url, search_base);
+  strcat(search_url, escaped_term);
+  strcat(search_url, search_suffix);
+
+  curl_free(escaped_term);
+
+  struct WikiMemoryStruct chunk = {malloc(1), 0};
+  if (!chunk.memory) {
+    free(search_url);
+    curl_easy_cleanup(curl);
+    return NULL;
+  }
+
+  curl_easy_setopt(curl, CURLOPT_URL, search_url);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WikiWriteMemoryCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+  apply_proxy_settings(curl);
+
+  char *first_title = NULL;
+  if (curl_easy_perform(curl) == CURLE_OK && chunk.size > 0) {
+    xmlDocPtr doc = xmlReadMemory(chunk.memory, chunk.size, "noname.xml", NULL, 0);
+    if (doc) {
+      xmlNode *root = xmlDocGetRootElement(doc);
+      xmlNode *search_node = find_node_recursive(root, "search");
+      if (search_node) {
+        for (xmlNode *sr = search_node->children; sr; sr = sr->next) {
+          if (sr->type == XML_ELEMENT_NODE &&
+              strcmp((const char *)sr->name, "p") == 0) {
+            xmlChar *title = xmlGetProp(sr, (const xmlChar *)"title");
+            if (title) {
+              first_title = strdup((const char *)title);
+              xmlFree(title);
+              break;
+            }
+          }
+        }
+      }
+      xmlFreeDoc(doc);
+    }
+  }
+
+  free(chunk.memory);
+  free(search_url);
+  curl_easy_cleanup(curl);
+
+  return first_title;
+}
+
+char *construct_wiki_url(const char *search_term) {
+  char *first_title = get_first_search_result(search_term);
+  if (!first_title)
+    return NULL;
+
+  CURL *curl = curl_easy_init();
+  if (!curl) {
+    free(first_title);
+    return NULL;
+  }
+
+  char *escaped_title = curl_easy_escape(curl, first_title, 0);
   const char *base = "https://en.wikipedia.org/w/"
                      "api.php?action=query&prop=extracts|pageimages&exintro&"
                      "explaintext&pithumbsize=400&format=xml&origin=*&titles=";
 
-  char *full_url = malloc(strlen(base) + strlen(escaped_term) + 1);
+  char *full_url = malloc(strlen(base) + strlen(escaped_title) + 1);
   if (full_url) {
     strcpy(full_url, base);
-    strcat(full_url, escaped_term);
+    strcat(full_url, escaped_title);
   }
 
-  curl_free(escaped_term);
+  curl_free(escaped_title);
   curl_easy_cleanup(curl);
+  free(first_title);
   return full_url;
 }
