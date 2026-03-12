@@ -1,14 +1,6 @@
-OS := $(shell uname -s)
-
-ifeq ($(OS), FreeBSD)
-    CC      := clang
-    CFLAGS  := -Wall -Wextra -O2 -Isrc -I/usr/local/include/libxml2 -I/usr/local/include
-    LDFLAGS := -L/usr/local/lib
-else
-    CC      := gcc
-    CFLAGS  := -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2
-    LDFLAGS :=
-endif
+CC      := cc
+CFLAGS  := -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2
+LDFLAGS :=
 
 LIBS    := -lbeaker -lcurl -lxml2 -lpthread -lm -lssl -lcrypto
 
@@ -26,7 +18,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
-	@echo "Build complete for $(OS): $(TARGET)"
+	@echo "Build complete: $(TARGET)"
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
@@ -43,7 +35,6 @@ clean:
 rebuild: clean all
 
 info:
-	@echo "Detected OS: $(OS)"
 	@echo "Compiler:    $(CC)"
 	@echo "CFlags:      $(CFLAGS)"
 	@echo ""
