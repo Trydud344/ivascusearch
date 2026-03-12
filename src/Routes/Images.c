@@ -1,7 +1,8 @@
 #include "Images.h"
-#include "../Proxy/Proxy.h"
 #include "../Scraping/Scraping.h"
+#include "../Utility/HttpClient.h"
 #include "../Utility/Unescape.h"
+#include "../Utility/XmlHelper.h"
 
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
@@ -9,61 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-
-struct MemoryBlock {
-  char *response;
-  size_t size;
-};
-
-static size_t ImageWriteCallback(void *data, size_t size, size_t nmemb,
-                                 void *userp) {
-  size_t realsize = size * nmemb;
-  struct MemoryBlock *mem = (struct MemoryBlock *)userp;
-  char *ptr = (char *)realloc(mem->response, mem->size + realsize + 1);
-  if (ptr == NULL) {
-    return 0;
-  }
-  mem->response = ptr;
-  memcpy(&(mem->response[mem->size]), data, realsize);
-  mem->size += realsize;
-  mem->response[mem->size] = 0;
-  return realsize;
-}
-
-static char *fetch_images_html(const char *url) {
-  CURL *curl_handle;
-  struct MemoryBlock chunk = {.response = malloc(1), .size = 0};
-  if (!chunk.response) {
-    return NULL;
-  }
-
-  curl_handle = curl_easy_init();
-  if (!curl_handle) {
-    free(chunk.response);
-    return NULL;
-  }
-
-  curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, ImageWriteCallback);
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
-  curl_easy_setopt(
-      curl_handle, CURLOPT_USERAGENT,
-      "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
-  curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10L);
-  apply_proxy_settings(curl_handle);
-
-  CURLcode res = curl_easy_perform(curl_handle);
-  if (res != CURLE_OK) {
-    free(chunk.response);
-    curl_easy_cleanup(curl_handle);
-    return NULL;
-  }
-
-  curl_easy_cleanup(curl_handle);
-  return chunk.response;
-}
 
 int images_handler(UrlParams *params) {
   TemplateContext ctx = new_context();
@@ -127,8 +73,10 @@ int images_handler(UrlParams *params) {
   snprintf(url, sizeof(url), "https://www.bing.com/images/search?q=%s&first=%d",
            encoded_query, first);
 
-  char *html = fetch_images_html(url);
-  if (!html) {
+  HttpResponse resp = http_get(
+      url,
+      "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
+  if (!resp.memory) {
     send_response("<h1>Error fetching images</h1>");
     free(encoded_query);
     free(display_query);
@@ -136,10 +84,10 @@ int images_handler(UrlParams *params) {
     return -1;
   }
 
-  htmlDocPtr doc = htmlReadMemory(html, (int)strlen(html), NULL, NULL,
+  htmlDocPtr doc = htmlReadMemory(resp.memory, resp.size, NULL, NULL,
                                   HTML_PARSE_RECOVER | HTML_PARSE_NOERROR);
   if (!doc) {
-    free(html);
+    http_response_free(&resp);
     free(encoded_query);
     free(display_query);
     free_context(&ctx);
@@ -150,7 +98,7 @@ int images_handler(UrlParams *params) {
 
   if (!xpathCtx) {
     xmlFreeDoc(doc);
-    free(html);
+    http_response_free(&resp);
     free(encoded_query);
     free(display_query);
     free_context(&ctx);
@@ -325,7 +273,7 @@ int images_handler(UrlParams *params) {
     xmlXPathFreeContext(xpathCtx);
   if (doc)
     xmlFreeDoc(doc);
-  free(html);
+  http_response_free(&resp);
   curl_free(encoded_query);
   free(display_query);
   free_context(&ctx);

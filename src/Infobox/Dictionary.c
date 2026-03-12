@@ -1,7 +1,8 @@
 #include "Dictionary.h"
 #include "../Cache/Cache.h"
-#include "../Proxy/Proxy.h"
 #include "../Scraping/Scraping.h"
+#include "../Utility/HttpClient.h"
+#include "../Utility/XmlHelper.h"
 #include <ctype.h>
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
@@ -50,44 +51,6 @@ static const char *strcasestr_impl(const char *haystack, const char *needle) {
       return h;
   }
   return NULL;
-}
-
-struct MemStruct {
-  char *memory;
-  size_t size;
-};
-
-static size_t WriteCallback(void *contents, size_t size, size_t nmemb,
-                            void *userp) {
-  size_t realsize = size * nmemb;
-  struct MemStruct *mem = (struct MemStruct *)userp;
-  char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-  if (!ptr)
-    return 0;
-  mem->memory = ptr;
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
-  return realsize;
-}
-
-static char *xpath_text(xmlDocPtr doc, const char *xpath) {
-  xmlXPathContextPtr ctx = xmlXPathNewContext(doc);
-  if (!ctx)
-    return NULL;
-  xmlXPathObjectPtr obj = xmlXPathEvalExpression((const xmlChar *)xpath, ctx);
-  xmlXPathFreeContext(ctx);
-  if (!obj || !obj->nodesetval || obj->nodesetval->nodeNr == 0) {
-    if (obj)
-      xmlXPathFreeObject(obj);
-    return NULL;
-  }
-  xmlChar *content = xmlNodeGetContent(obj->nodesetval->nodeTab[0]);
-  char *result = content ? strdup((char *)content) : NULL;
-  if (content)
-    xmlFree(content);
-  xmlXPathFreeObject(obj);
-  return result;
 }
 
 static char *build_html(const char *word, const char *pron, const char *pos,
@@ -240,13 +203,7 @@ char *construct_dictionary_url(const char *query) {
   if (!word)
     return NULL;
 
-  CURL *curl = curl_easy_init();
-  if (!curl) {
-    free(word);
-    return NULL;
-  }
-
-  char *escaped = curl_easy_escape(curl, word, 0);
+  char *escaped = curl_easy_escape(NULL, word, 0);
   const char *base = "https://dictionary.cambridge.org/dictionary/english/";
   char *url = malloc(strlen(base) + strlen(escaped) + 1);
   if (url) {
@@ -255,7 +212,6 @@ char *construct_dictionary_url(const char *query) {
   }
 
   curl_free(escaped);
-  curl_easy_cleanup(curl);
   free(word);
   return url;
 }
@@ -309,28 +265,15 @@ InfoBox fetch_dictionary_data(const char *query) {
   }
   free(cache_key);
 
-  CURL *curl = curl_easy_init();
-  if (!curl) {
-    free(url);
-    return info;
-  }
-
-  struct MemStruct chunk = {malloc(1), 0};
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0");
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  apply_proxy_settings(curl);
-
-  if (curl_easy_perform(curl) == CURLE_OK && chunk.size > 0) {
+  HttpResponse resp = http_get(url, "Mozilla/5.0");
+  if (resp.memory && resp.size > 0) {
     cache_key = cache_compute_key(url, 0, "dictionary");
     if (cache_key && get_cache_ttl_infobox() > 0) {
-      cache_set(cache_key, chunk.memory, chunk.size);
+      cache_set(cache_key, resp.memory, resp.size);
     }
     free(cache_key);
 
-    htmlDocPtr doc = htmlReadMemory(chunk.memory, chunk.size, url, NULL,
+    htmlDocPtr doc = htmlReadMemory(resp.memory, resp.size, url, NULL,
                                     HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
                                         HTML_PARSE_NOWARNING);
     if (doc) {
@@ -358,8 +301,7 @@ InfoBox fetch_dictionary_data(const char *query) {
     }
   }
 
-  curl_easy_cleanup(curl);
-  free(chunk.memory);
+  http_response_free(&resp);
   free(url);
   return info;
 }

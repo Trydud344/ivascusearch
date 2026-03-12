@@ -2,6 +2,7 @@
 #include "../Cache/Cache.h"
 #include "../Proxy/Proxy.h"
 #include "../Utility/Unescape.h"
+#include "../Utility/XmlHelper.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
 #include <libxml/xpath.h>
@@ -57,15 +58,15 @@ static int parse_ddg_lite(const char *engine_name, xmlDocPtr doc,
                           SearchResult **out_results, int max_results) {
   (void)engine_name;
   int found_count = 0;
+
   xmlXPathContextPtr xpathCtx = xmlXPathNewContext(doc);
   if (!xpathCtx) {
     return 0;
   }
 
-  const char *link_xpath = "//tr[not(contains(@class, "
-                           "'result-sponsored'))]//a[@class='result-link']";
-  xmlXPathObjectPtr xpathObj =
-      xmlXPathEvalExpression((xmlChar *)link_xpath, xpathCtx);
+  xmlXPathObjectPtr xpathObj = xml_xpath_eval(
+      xpathCtx, "//tr[not(contains(@class, "
+                "'result-sponsored'))]//a[@class='result-link']");
 
   if (!xpathObj || !xpathObj->nodesetval || xpathObj->nodesetval->nodeNr == 0) {
     if (xpathObj)
@@ -75,9 +76,7 @@ static int parse_ddg_lite(const char *engine_name, xmlDocPtr doc,
   }
 
   int num_links = xpathObj->nodesetval->nodeNr;
-
-  int actual_alloc = (num_links < max_results) ? num_links : max_results;
-  *out_results = (SearchResult *)calloc(actual_alloc, sizeof(SearchResult));
+  *out_results = xml_result_alloc(num_links, max_results);
   if (!*out_results) {
     xmlXPathFreeObject(xpathObj);
     xmlXPathFreeContext(xpathCtx);
@@ -86,7 +85,7 @@ static int parse_ddg_lite(const char *engine_name, xmlDocPtr doc,
 
   for (int i = 0; i < num_links && found_count < max_results; i++) {
     xmlNodePtr linkNode = xpathObj->nodesetval->nodeTab[i];
-    char *title = (char *)xmlNodeGetContent(linkNode);
+    char *title = xml_node_content(linkNode);
     char *url = (char *)xmlGetProp(linkNode, (xmlChar *)"href");
     char *snippet_text = NULL;
 
@@ -100,13 +99,11 @@ static int parse_ddg_lite(const char *engine_name, xmlDocPtr doc,
              xmlStrcasecmp(snippetRow->name, (const xmlChar *)"tr") != 0)
         snippetRow = snippetRow->next;
       if (snippetRow) {
-
         xpathCtx->node = snippetRow;
-        xmlXPathObjectPtr sObj = xmlXPathEvalExpression(
-            (xmlChar *)".//td[@class='result-snippet']", xpathCtx);
+        xmlXPathObjectPtr sObj =
+            xml_xpath_eval(xpathCtx, ".//td[@class='result-snippet']");
         if (sObj && sObj->nodesetval && sObj->nodesetval->nodeNr > 0) {
-          snippet_text =
-              (char *)xmlNodeGetContent(sObj->nodesetval->nodeTab[0]);
+          snippet_text = xml_node_content(sObj->nodesetval->nodeTab[0]);
         }
         if (sObj)
           xmlXPathFreeObject(sObj);
@@ -118,7 +115,6 @@ static int parse_ddg_lite(const char *engine_name, xmlDocPtr doc,
     (*out_results)[found_count].title = strdup(title ? title : "No Title");
     (*out_results)[found_count].snippet =
         strdup(snippet_text ? snippet_text : "");
-
     found_count++;
 
     if (title)
@@ -138,14 +134,14 @@ static int parse_startpage(const char *engine_name, xmlDocPtr doc,
                            SearchResult **out_results, int max_results) {
   (void)engine_name;
   int found_count = 0;
+
   xmlXPathContextPtr xpathCtx = xmlXPathNewContext(doc);
   if (!xpathCtx) {
     return 0;
   }
 
-  const char *container_xpath = "//div[contains(@class, 'result')]";
   xmlXPathObjectPtr xpathObj =
-      xmlXPathEvalExpression((xmlChar *)container_xpath, xpathCtx);
+      xml_xpath_eval(xpathCtx, "//div[contains(@class, 'result')]");
 
   if (!xpathObj || !xpathObj->nodesetval || xpathObj->nodesetval->nodeNr == 0) {
     if (xpathObj)
@@ -155,9 +151,7 @@ static int parse_startpage(const char *engine_name, xmlDocPtr doc,
   }
 
   int num_results = xpathObj->nodesetval->nodeNr;
-
-  int actual_alloc = (num_results < max_results) ? num_results : max_results;
-  *out_results = (SearchResult *)calloc(actual_alloc, sizeof(SearchResult));
+  *out_results = xml_result_alloc(num_results, max_results);
   if (!*out_results) {
     xmlXPathFreeObject(xpathObj);
     xmlXPathFreeContext(xpathCtx);
@@ -168,27 +162,27 @@ static int parse_startpage(const char *engine_name, xmlDocPtr doc,
     xmlNodePtr resultNode = xpathObj->nodesetval->nodeTab[i];
     xpathCtx->node = resultNode;
 
-    xmlXPathObjectPtr linkObj = xmlXPathEvalExpression(
-        (xmlChar *)".//a[contains(@class, 'result-link')]", xpathCtx);
+    xmlXPathObjectPtr linkObj =
+        xml_xpath_eval(xpathCtx, ".//a[contains(@class, 'result-link')]");
     char *url =
         (linkObj && linkObj->nodesetval && linkObj->nodesetval->nodeNr > 0)
             ? (char *)xmlGetProp(linkObj->nodesetval->nodeTab[0],
                                  (xmlChar *)"href")
             : NULL;
 
-    xmlXPathObjectPtr titleObj = xmlXPathEvalExpression(
-        (xmlChar *)".//h2[contains(@class, 'wgl-title')]", xpathCtx);
+    xmlXPathObjectPtr titleObj =
+        xml_xpath_eval(xpathCtx, ".//h2[contains(@class, 'wgl-title')]");
     char *title =
         (titleObj && titleObj->nodesetval && titleObj->nodesetval->nodeNr > 0)
-            ? (char *)xmlNodeGetContent(titleObj->nodesetval->nodeTab[0])
+            ? xml_node_content(titleObj->nodesetval->nodeTab[0])
             : NULL;
 
-    xmlXPathObjectPtr snippetObj = xmlXPathEvalExpression(
-        (xmlChar *)".//p[contains(@class, 'description')]", xpathCtx);
+    xmlXPathObjectPtr snippetObj =
+        xml_xpath_eval(xpathCtx, ".//p[contains(@class, 'description')]");
     char *snippet_text =
         (snippetObj && snippetObj->nodesetval &&
          snippetObj->nodesetval->nodeNr > 0)
-            ? (char *)xmlNodeGetContent(snippetObj->nodesetval->nodeTab[0])
+            ? xml_node_content(snippetObj->nodesetval->nodeTab[0])
             : NULL;
 
     if (url && title) {
@@ -214,7 +208,6 @@ static int parse_startpage(const char *engine_name, xmlDocPtr doc,
   }
 
   xpathCtx->node = NULL;
-
   xmlXPathFreeObject(xpathObj);
   xmlXPathFreeContext(xpathCtx);
   return found_count;
@@ -224,14 +217,14 @@ static int parse_yahoo(const char *engine_name, xmlDocPtr doc,
                        SearchResult **out_results, int max_results) {
   (void)engine_name;
   int found_count = 0;
+
   xmlXPathContextPtr xpathCtx = xmlXPathNewContext(doc);
   if (!xpathCtx) {
     return 0;
   }
 
-  const char *container_xpath = "//div[contains(@class, 'algo-sr')]";
   xmlXPathObjectPtr xpathObj =
-      xmlXPathEvalExpression((xmlChar *)container_xpath, xpathCtx);
+      xml_xpath_eval(xpathCtx, "//div[contains(@class, 'algo-sr')]");
 
   if (!xpathObj || !xpathObj->nodesetval || xpathObj->nodesetval->nodeNr == 0) {
     if (xpathObj)
@@ -241,9 +234,7 @@ static int parse_yahoo(const char *engine_name, xmlDocPtr doc,
   }
 
   int num_results = xpathObj->nodesetval->nodeNr;
-
-  int actual_alloc = (num_results < max_results) ? num_results : max_results;
-  *out_results = (SearchResult *)calloc(actual_alloc, sizeof(SearchResult));
+  *out_results = xml_result_alloc(num_results, max_results);
   if (!*out_results) {
     xmlXPathFreeObject(xpathObj);
     xmlXPathFreeContext(xpathCtx);
@@ -254,28 +245,27 @@ static int parse_yahoo(const char *engine_name, xmlDocPtr doc,
     xmlNodePtr resultNode = xpathObj->nodesetval->nodeTab[i];
     xpathCtx->node = resultNode;
 
-    xmlXPathObjectPtr linkObj = xmlXPathEvalExpression(
-        (xmlChar *)".//div[contains(@class, 'compTitle')]//a[@target='_blank']",
-        xpathCtx);
+    xmlXPathObjectPtr linkObj = xml_xpath_eval(
+        xpathCtx, ".//div[contains(@class, 'compTitle')]//a[@target='_blank']");
     char *url =
         (linkObj && linkObj->nodesetval && linkObj->nodesetval->nodeNr > 0)
             ? (char *)xmlGetProp(linkObj->nodesetval->nodeTab[0],
                                  (xmlChar *)"href")
             : NULL;
 
-    xmlXPathObjectPtr titleObj = xmlXPathEvalExpression(
-        (xmlChar *)".//h3[contains(@class, 'title')]", xpathCtx);
+    xmlXPathObjectPtr titleObj =
+        xml_xpath_eval(xpathCtx, ".//h3[contains(@class, 'title')]");
     char *title =
         (titleObj && titleObj->nodesetval && titleObj->nodesetval->nodeNr > 0)
-            ? (char *)xmlNodeGetContent(titleObj->nodesetval->nodeTab[0])
+            ? xml_node_content(titleObj->nodesetval->nodeTab[0])
             : NULL;
 
-    xmlXPathObjectPtr snippetObj = xmlXPathEvalExpression(
-        (xmlChar *)".//div[contains(@class, 'compText')]//p", xpathCtx);
+    xmlXPathObjectPtr snippetObj =
+        xml_xpath_eval(xpathCtx, ".//div[contains(@class, 'compText')]//p");
     char *snippet_text =
         (snippetObj && snippetObj->nodesetval &&
          snippetObj->nodesetval->nodeNr > 0)
-            ? (char *)xmlNodeGetContent(snippetObj->nodesetval->nodeTab[0])
+            ? xml_node_content(snippetObj->nodesetval->nodeTab[0])
             : NULL;
 
     if (url && title) {
@@ -344,17 +334,110 @@ static void configure_curl_handle(CURL *curl, const char *full_url,
   curl_easy_setopt(curl, CURLOPT_USERAGENT, get_random_user_agent());
 
   curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-
   curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
-
   curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 300L);
-
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
   curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
 
   apply_proxy_settings(curl);
+}
+
+static char *build_search_url(const char *base_url, const char *page_param,
+                              int page_multiplier, int page_base,
+                              const char *encoded_query, int page) {
+  int page_value = (page < 1 ? 1 : page - 1) * page_multiplier + page_base;
+  char *url = malloc(1024);
+  if (!url) {
+    return NULL;
+  }
+  snprintf(url, 1024, "%s%s&%s=%d", base_url, encoded_query, page_param,
+           page_value);
+  return url;
+}
+
+static struct curl_slist *build_request_headers(const char *host_header,
+                                                const char *referer) {
+  struct curl_slist *headers = NULL;
+  char host_buf[256], ref_buf[256];
+
+  snprintf(host_buf, sizeof(host_buf), "Host: %s", host_header);
+  snprintf(ref_buf, sizeof(ref_buf), "Referer: %s", referer);
+
+  headers = curl_slist_append(headers, host_buf);
+  headers = curl_slist_append(headers, ref_buf);
+  headers = curl_slist_append(
+      headers,
+      "Accept: "
+      "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+  headers = curl_slist_append(headers, "Accept-Language: en-US,en;q=0.5");
+  headers = curl_slist_append(headers, "DNT: 1");
+
+  return headers;
+}
+
+static int check_cache_for_job(ScrapeJob *job) {
+  if (get_cache_ttl_search() <= 0) {
+    return 0;
+  }
+
+  char *key = cache_compute_key(job->query, job->page, job->engine->name);
+  if (!key) {
+    return 0;
+  }
+
+  char *cached_data = NULL;
+  size_t cached_size = 0;
+
+  if (cache_get(key, (time_t)get_cache_ttl_search(), &cached_data,
+                &cached_size) == 0 &&
+      cached_data && cached_size > 0) {
+    xmlDocPtr doc = htmlReadMemory(cached_data, cached_size, NULL, NULL,
+                                   HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
+                                       HTML_PARSE_NOWARNING);
+    if (doc) {
+      job->results_count = job->engine->parser(
+          job->engine->name, doc, job->out_results, job->max_results);
+      xmlFreeDoc(doc);
+    }
+    free(cached_data);
+    free(key);
+    return 1;
+  }
+
+  free(key);
+  return 0;
+}
+
+static void process_job_response(ScrapeJob *job, CURL *handle, CURLMsg *msg) {
+  if (msg->data.result == CURLE_OK && job->response.size > 0) {
+    char *key = cache_compute_key(job->query, job->page, job->engine->name);
+    if (key && get_cache_ttl_search() > 0) {
+      cache_set(key, job->response.memory, job->response.size);
+      free(key);
+    }
+
+    xmlDocPtr doc = htmlReadMemory(
+        job->response.memory, job->response.size, NULL, NULL,
+        HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
+
+    if (doc) {
+      job->results_count = job->engine->parser(
+          job->engine->name, doc, job->out_results, job->max_results);
+      xmlFreeDoc(doc);
+    }
+  } else {
+    job->results_count = 0;
+  }
+
+  struct curl_slist *headers = NULL;
+  curl_easy_getinfo(handle, CURLINFO_PRIVATE, &headers);
+  if (headers)
+    curl_slist_free_all(headers);
+
+  free(job->response.memory);
+  job->response.memory = NULL;
 }
 
 int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
@@ -369,10 +452,6 @@ retry:
   for (int i = 0; i < num_jobs; i++) {
     ScrapeJob *job = &jobs[i];
 
-    char cache_key[64];
-    char full_url[1024];
-    char *encoded_query = NULL;
-
     if (job->handle) {
       curl_easy_cleanup(job->handle);
       job->handle = NULL;
@@ -381,57 +460,29 @@ retry:
       free(job->response.memory);
     }
 
-    encoded_query = curl_easy_escape(NULL, job->query, 0);
+    if (check_cache_for_job(job)) {
+      job->results_count = job->results_count > 0 ? job->results_count : 0;
+      continue;
+    }
+
+    char *encoded_query = curl_easy_escape(NULL, job->query, 0);
     if (!encoded_query) {
       continue;
     }
 
-    int page = (job->page < 1) ? 1 : job->page;
-    int page_value =
-        (page - 1) * job->engine->page_multiplier + job->engine->page_base;
+    char *full_url =
+        build_search_url(job->engine->base_url, job->engine->page_param,
+                         job->engine->page_multiplier, job->engine->page_base,
+                         encoded_query, job->page);
+    free(encoded_query);
 
-    snprintf(full_url, sizeof(full_url), "%s%s&%s=%d", job->engine->base_url,
-             encoded_query, job->engine->page_param, page_value);
-
-    char *key = cache_compute_key(job->query, job->page, job->engine->name);
-    if (key) {
-      strncpy(cache_key, key, sizeof(cache_key) - 1);
-      cache_key[sizeof(cache_key) - 1] = '\0';
-      free(key);
-    } else {
-      snprintf(cache_key, sizeof(cache_key), "uncached_%d_%s", i,
-               job->engine->name);
-    }
-
-    char *cached_data = NULL;
-    size_t cached_size = 0;
-    int cache_hit = 0;
-
-    if (get_cache_ttl_search() > 0 &&
-        cache_get(cache_key, (time_t)get_cache_ttl_search(), &cached_data,
-                  &cached_size) == 0 &&
-        cached_data && cached_size > 0) {
-      xmlDocPtr doc = htmlReadMemory(cached_data, cached_size, NULL, NULL,
-                                     HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
-                                         HTML_PARSE_NOWARNING);
-      if (doc) {
-        job->results_count = job->engine->parser(
-            job->engine->name, doc, job->out_results, job->max_results);
-        xmlFreeDoc(doc);
-        cache_hit = 1;
-      }
-      free(cached_data);
-    }
-
-    if (cache_hit) {
-      free(encoded_query);
-      job->results_count = job->results_count > 0 ? job->results_count : 0;
+    if (!full_url) {
       continue;
     }
 
     job->handle = curl_easy_init();
     if (!job->handle) {
-      free(encoded_query);
+      free(full_url);
       continue;
     }
 
@@ -439,23 +490,13 @@ retry:
     job->response.size = 0;
     job->response.capacity = 16384;
 
-    struct curl_slist *headers = NULL;
-    char host_buf[256], ref_buf[256];
-    snprintf(host_buf, sizeof(host_buf), "Host: %s", job->engine->host_header);
-    snprintf(ref_buf, sizeof(ref_buf), "Referer: %s", job->engine->referer);
-    headers = curl_slist_append(headers, host_buf);
-    headers = curl_slist_append(headers, ref_buf);
-    headers = curl_slist_append(
-        headers,
-        "Accept: "
-        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-    headers = curl_slist_append(headers, "Accept-Language: en-US,en;q=0.5");
-    headers = curl_slist_append(headers, "DNT: 1");
+    struct curl_slist *headers =
+        build_request_headers(job->engine->host_header, job->engine->referer);
 
     configure_curl_handle(job->handle, full_url, &job->response, headers);
-
     curl_easy_setopt(job->handle, CURLOPT_PRIVATE, headers);
 
+    free(full_url);
     curl_multi_add_handle(multi_handle, job->handle);
   }
 
@@ -485,37 +526,8 @@ retry:
         if (jobs[i].handle && jobs[i].handle == handle) {
           ScrapeJob *job = &jobs[i];
 
-          long response_code;
-          curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response_code);
+          process_job_response(job, handle, msg);
 
-          if (msg->data.result == CURLE_OK && job->response.size > 0) {
-            char *key =
-                cache_compute_key(job->query, job->page, job->engine->name);
-            if (key && get_cache_ttl_search() > 0) {
-              cache_set(key, job->response.memory, job->response.size);
-              free(key);
-            }
-
-            xmlDocPtr doc = htmlReadMemory(
-                job->response.memory, job->response.size, NULL, NULL,
-                HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
-
-            if (doc) {
-              job->results_count = job->engine->parser(
-                  job->engine->name, doc, job->out_results, job->max_results);
-              xmlFreeDoc(doc);
-            }
-          } else {
-            job->results_count = 0;
-          }
-
-          struct curl_slist *headers;
-          curl_easy_getinfo(handle, CURLINFO_PRIVATE, &headers);
-          if (headers)
-            curl_slist_free_all(headers);
-
-          free(job->response.memory);
-          job->response.memory = NULL;
           curl_multi_remove_handle(multi_handle, handle);
           if (handle)
             curl_easy_cleanup(handle);
