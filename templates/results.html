@@ -62,25 +62,27 @@
                 </nav>
             </main>
             <aside class="infobox-sidebar">
-                {{for info in infoboxes}}
-                <section class="infobox">
-                    <div class="infobox-header">
-                        <h2 class="infobox-title">
-                            {{info[0]}}
-                        </h2>
-                    </div>
-                    <div class="infobox-main">
-                        <img src="{{info[1]}}" alt="{{info[0]}}" class="infobox-image">
-                        <div class="infobox-content"> <p class="infobox-summary">
-                                {{info[2]|safe}}
-                            </p>
-                            <a class="read-more" href="{{info[3]}}">
-                                Read More
-                            </a>
-                        </div>
-                    </div>
-                </section>
-                {{endfor}}
+            {{if exists infoboxes}}
+              {{for info in infoboxes}}
+                 <section class="infobox">
+                     <div class="infobox-header">
+                         <h2 class="infobox-title">
+                             {{info[0]}}
+                         </h2>
+                     </div>
+                     <div class="infobox-main">
+                         <img src="{{info[1]}}" alt="{{info[0]}}" class="infobox-image">
+                         <div class="infobox-content"> <p class="infobox-summary">
+                                 {{info[2]|safe}}
+                             </p>
+                             <a class="read-more" href="{{info[3]}}">
+                                 Read More
+                             </a>
+                         </div>
+                     </div>
+                 </section>
+                 {{endfor}}
+               {{endif}}
             </aside>
         </div>
     </body>
