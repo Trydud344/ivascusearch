@@ -266,6 +266,18 @@ int results_handler(UrlParams *params) {
     char ***results_matrix = (char ***)malloc(sizeof(char **) * total_results);
     int *results_inner_counts = (int *)malloc(sizeof(int) * total_results);
     char **seen_urls = (char **)malloc(sizeof(char *) * total_results);
+    if (!results_matrix || !results_inner_counts || !seen_urls) {
+      if (results_matrix) free(results_matrix);
+      if (results_inner_counts) free(results_inner_counts);
+      if (seen_urls) free(seen_urls);
+      char *html = render_template("results.html", &ctx);
+      if (html) {
+        send_response(html);
+        free(html);
+      }
+      free_context(&ctx);
+      return 0;
+    }
     int unique_count = 0;
 
     for (int i = 0; i < ENGINE_COUNT; i++) {
@@ -288,8 +300,21 @@ int results_handler(UrlParams *params) {
         }
 
         seen_urls[unique_count] = strdup(display_url);
+        if (!seen_urls[unique_count]) {
+          free(all_results[i][j].url);
+          free(all_results[i][j].title);
+          free(all_results[i][j].snippet);
+          continue;
+        }
         results_matrix[unique_count] =
             (char **)malloc(sizeof(char *) * INFOBOX_FIELD_COUNT);
+        if (!results_matrix[unique_count]) {
+          free(seen_urls[unique_count]);
+          free(all_results[i][j].url);
+          free(all_results[i][j].title);
+          free(all_results[i][j].snippet);
+          continue;
+        }
         char *pretty_url = pretty_display_url(display_url);
 
         results_matrix[unique_count][0] = strdup(display_url);

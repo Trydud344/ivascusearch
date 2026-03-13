@@ -118,6 +118,12 @@ int images_handler(UrlParams *params) {
     int max_images = (nodes < 32) ? nodes : 32;
     image_matrix = malloc(sizeof(char **) * max_images);
     inner_counts = malloc(sizeof(int) * max_images);
+    if (!image_matrix || !inner_counts) {
+      if (image_matrix) free(image_matrix);
+      if (inner_counts) free(inner_counts);
+      image_matrix = NULL;
+      inner_counts = NULL;
+    }
 
     for (int i = 0; i < nodes; i++) {
       if (image_count >= 32)
@@ -224,6 +230,7 @@ int images_handler(UrlParams *params) {
         image_matrix[image_count] = malloc(sizeof(char *) * 4);
         image_matrix[image_count][0] =
             proxy_url ? strdup(proxy_url) : strdup((char *)iurl);
+        free(proxy_url);
         image_matrix[image_count][1] = strdup(title ? (char *)title : "Image");
         image_matrix[image_count][2] = strdup(rurl ? (char *)rurl : "#");
         image_matrix[image_count][3] =
