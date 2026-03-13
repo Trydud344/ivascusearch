@@ -14,25 +14,46 @@
 #include <string.h>
 #include <time.h>
 
+#define INFOBOX_FIELD_COUNT 4
+#define MAX_RESULTS_PER_ENGINE 10
+
 typedef struct {
   const char *query;
   InfoBox result;
   int success;
 } InfoBoxThreadData;
 
-static void *wiki_thread_func(void *arg) {
-  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
-  char *dynamic_url = construct_wiki_url(data->query);
-  if (dynamic_url) {
-    data->result = fetch_wiki_data(dynamic_url);
-    data->success =
-        (data->result.title != NULL && data->result.extract != NULL &&
-         strlen(data->result.extract) > 10);
-    free(dynamic_url);
-  } else {
-    data->success = 0;
-  }
-  return NULL;
+typedef struct {
+  int (*check_fn)(const char *query);
+  InfoBox (*fetch_fn)(char *query);
+  char *(*url_construct_fn)(const char *query);
+} InfoBoxHandler;
+
+static InfoBox fetch_wiki_wrapper(char *query) {
+  char *url = construct_wiki_url(query);
+  if (!url)
+    return (InfoBox){NULL};
+  InfoBox result = fetch_wiki_data(url);
+  free(url);
+  return result;
+}
+
+static int always_true(const char *query) {
+  (void)query;
+  return 1;
+}
+
+static InfoBox fetch_dict_wrapper(char *query) {
+  return fetch_dictionary_data(query);
+}
+static InfoBox fetch_calc_wrapper(char *query) {
+  return fetch_calc_data(query);
+}
+static InfoBox fetch_unit_wrapper(char *query) {
+  return fetch_unit_conv_data(query);
+}
+static InfoBox fetch_currency_wrapper(char *query) {
+  return fetch_currency_data(query);
 }
 
 static int is_calculator_query(const char *query) {
@@ -88,59 +109,30 @@ static int is_calculator_query(const char *query) {
   return 0;
 }
 
-static void *calc_thread_func(void *arg) {
-  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
+static InfoBoxHandler handlers[] = {
+    {is_dictionary_query, fetch_dict_wrapper, NULL},
+    {is_calculator_query, fetch_calc_wrapper, NULL},
+    {is_unit_conv_query, fetch_unit_wrapper, NULL},
+    {is_currency_query, fetch_currency_wrapper, NULL},
+    {always_true, fetch_wiki_wrapper, construct_wiki_url},
+};
+enum { HANDLER_COUNT = sizeof(handlers) / sizeof(handlers[0]) };
 
-  if (is_calculator_query(data->query)) {
-    data->result = fetch_calc_data((char *)data->query);
-    data->success =
-        (data->result.title != NULL && data->result.extract != NULL);
-  } else {
+static void *infobox_thread_func(void *arg) {
+  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
+  int handler_idx = data->success;
+  if (handler_idx < 0 || handler_idx >= HANDLER_COUNT)
+    return NULL;
+
+  InfoBoxHandler *h = &handlers[handler_idx];
+  if (h->check_fn && !h->check_fn(data->query)) {
     data->success = 0;
+    return NULL;
   }
 
-  return NULL;
-}
-
-static void *dict_thread_func(void *arg) {
-  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
-
-  if (is_dictionary_query(data->query)) {
-    data->result = fetch_dictionary_data(data->query);
-    data->success =
-        (data->result.title != NULL && data->result.extract != NULL);
-  } else {
-    data->success = 0;
-  }
-
-  return NULL;
-}
-
-static void *unit_thread_func(void *arg) {
-  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
-
-  if (is_unit_conv_query(data->query)) {
-    data->result = fetch_unit_conv_data(data->query);
-    data->success =
-        (data->result.title != NULL && data->result.extract != NULL);
-  } else {
-    data->success = 0;
-  }
-
-  return NULL;
-}
-
-static void *currency_thread_func(void *arg) {
-  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
-
-  if (is_currency_query(data->query)) {
-    data->result = fetch_currency_data(data->query);
-    data->success =
-        (data->result.title != NULL && data->result.extract != NULL);
-  } else {
-    data->success = 0;
-  }
-
+  data->result = h->fetch_fn((char *)data->query);
+  data->success = (data->result.title != NULL && data->result.extract != NULL &&
+                   strlen(data->result.extract) > 10);
   return NULL;
 }
 
@@ -151,7 +143,8 @@ static int add_infobox_to_collection(InfoBox *infobox, char ****collection,
   *inner_counts =
       (int *)realloc(*inner_counts, sizeof(int) * (current_count + 1));
 
-  (*collection)[current_count] = (char **)malloc(sizeof(char *) * 4);
+  (*collection)[current_count] =
+      (char **)malloc(sizeof(char *) * INFOBOX_FIELD_COUNT);
   (*collection)[current_count][0] =
       infobox->title ? strdup(infobox->title) : NULL;
   (*collection)[current_count][1] =
@@ -159,7 +152,7 @@ static int add_infobox_to_collection(InfoBox *infobox, char ****collection,
   (*collection)[current_count][2] =
       infobox->extract ? strdup(infobox->extract) : NULL;
   (*collection)[current_count][3] = infobox->url ? strdup(infobox->url) : NULL;
-  (*inner_counts)[current_count] = 4;
+  (*inner_counts)[current_count] = INFOBOX_FIELD_COUNT;
 
   return current_count + 1;
 }
@@ -197,19 +190,20 @@ int results_handler(UrlParams *params) {
     return -1;
   }
 
-  pthread_t wiki_tid, calc_tid, dict_tid, unit_tid, currency_tid;
-  InfoBoxThreadData wiki_data = {.query = raw_query, .success = 0};
-  InfoBoxThreadData calc_data = {.query = raw_query, .success = 0};
-  InfoBoxThreadData dict_data = {.query = raw_query, .success = 0};
-  InfoBoxThreadData unit_data = {.query = raw_query, .success = 0};
-  InfoBoxThreadData currency_data = {.query = raw_query, .success = 0};
+  pthread_t infobox_threads[HANDLER_COUNT];
+  InfoBoxThreadData infobox_data[HANDLER_COUNT];
+
+  for (int i = 0; i < HANDLER_COUNT; i++) {
+    infobox_data[i].query = raw_query;
+    infobox_data[i].success = i;
+    infobox_data[i].result = (InfoBox){NULL};
+  }
 
   if (page == 1) {
-    pthread_create(&wiki_tid, NULL, wiki_thread_func, &wiki_data);
-    pthread_create(&calc_tid, NULL, calc_thread_func, &calc_data);
-    pthread_create(&dict_tid, NULL, dict_thread_func, &dict_data);
-    pthread_create(&unit_tid, NULL, unit_thread_func, &unit_data);
-    pthread_create(&currency_tid, NULL, currency_thread_func, &currency_data);
+    for (int i = 0; i < HANDLER_COUNT; i++) {
+      pthread_create(&infobox_threads[i], NULL, infobox_thread_func,
+                     &infobox_data[i]);
+    }
   }
 
   ScrapeJob jobs[ENGINE_COUNT];
@@ -220,7 +214,7 @@ int results_handler(UrlParams *params) {
     jobs[i].engine = &ENGINE_REGISTRY[i];
     jobs[i].query = raw_query;
     jobs[i].out_results = &all_results[i];
-    jobs[i].max_results = 10;
+    jobs[i].max_results = MAX_RESULTS_PER_ENGINE;
     jobs[i].results_count = 0;
     jobs[i].page = page;
     jobs[i].handle = NULL;
@@ -232,11 +226,9 @@ int results_handler(UrlParams *params) {
   scrape_engines_parallel(jobs, ENGINE_COUNT);
 
   if (page == 1) {
-    pthread_join(wiki_tid, NULL);
-    pthread_join(calc_tid, NULL);
-    pthread_join(dict_tid, NULL);
-    pthread_join(unit_tid, NULL);
-    pthread_join(currency_tid, NULL);
+    for (int i = 0; i < HANDLER_COUNT; i++) {
+      pthread_join(infobox_threads[i], NULL);
+    }
   }
 
   char ***infobox_matrix = NULL;
@@ -244,34 +236,12 @@ int results_handler(UrlParams *params) {
   int infobox_count = 0;
 
   if (page == 1) {
-    if (dict_data.success) {
-      infobox_count =
-          add_infobox_to_collection(&dict_data.result, &infobox_matrix,
-                                    &infobox_inner_counts, infobox_count);
-    }
-
-    if (calc_data.success) {
-      infobox_count =
-          add_infobox_to_collection(&calc_data.result, &infobox_matrix,
-                                    &infobox_inner_counts, infobox_count);
-    }
-
-    if (unit_data.success) {
-      infobox_count =
-          add_infobox_to_collection(&unit_data.result, &infobox_matrix,
-                                    &infobox_inner_counts, infobox_count);
-    }
-
-    if (currency_data.success) {
-      infobox_count =
-          add_infobox_to_collection(&currency_data.result, &infobox_matrix,
-                                    &infobox_inner_counts, infobox_count);
-    }
-
-    if (wiki_data.success) {
-      infobox_count =
-          add_infobox_to_collection(&wiki_data.result, &infobox_matrix,
-                                    &infobox_inner_counts, infobox_count);
+    for (int i = 0; i < HANDLER_COUNT; i++) {
+      if (infobox_data[i].success) {
+        infobox_count =
+            add_infobox_to_collection(&infobox_data[i].result, &infobox_matrix,
+                                      &infobox_inner_counts, infobox_count);
+      }
     }
   }
 
@@ -279,7 +249,7 @@ int results_handler(UrlParams *params) {
     context_set_array_of_arrays(&ctx, "infoboxes", infobox_matrix,
                                 infobox_count, infobox_inner_counts);
     for (int i = 0; i < infobox_count; i++) {
-      for (int j = 0; j < 4; j++)
+      for (int j = 0; j < INFOBOX_FIELD_COUNT; j++)
         free(infobox_matrix[i][j]);
       free(infobox_matrix[i]);
     }
@@ -318,7 +288,8 @@ int results_handler(UrlParams *params) {
         }
 
         seen_urls[unique_count] = strdup(display_url);
-        results_matrix[unique_count] = (char **)malloc(sizeof(char *) * 4);
+        results_matrix[unique_count] =
+            (char **)malloc(sizeof(char *) * INFOBOX_FIELD_COUNT);
         char *pretty_url = pretty_display_url(display_url);
 
         results_matrix[unique_count][0] = strdup(display_url);
@@ -330,7 +301,7 @@ int results_handler(UrlParams *params) {
             all_results[i][j].snippet ? strdup(all_results[i][j].snippet)
                                       : strdup("");
 
-        results_inner_counts[unique_count] = 4;
+        results_inner_counts[unique_count] = INFOBOX_FIELD_COUNT;
 
         free(pretty_url);
         free(all_results[i][j].url);
@@ -352,7 +323,7 @@ int results_handler(UrlParams *params) {
     }
 
     for (int i = 0; i < unique_count; i++) {
-      for (int j = 0; j < 4; j++)
+      for (int j = 0; j < INFOBOX_FIELD_COUNT; j++)
         free(results_matrix[i][j]);
       free(results_matrix[i]);
       free(seen_urls[i]);
@@ -369,16 +340,11 @@ int results_handler(UrlParams *params) {
   }
 
   if (page == 1) {
-    if (wiki_data.success)
-      free_infobox(&wiki_data.result);
-    if (calc_data.success)
-      free_infobox(&calc_data.result);
-    if (dict_data.success)
-      free_infobox(&dict_data.result);
-    if (unit_data.success)
-      free_infobox(&unit_data.result);
-    if (currency_data.success)
-      free_infobox(&currency_data.result);
+    for (int i = 0; i < HANDLER_COUNT; i++) {
+      if (infobox_data[i].success) {
+        free_infobox(&infobox_data[i].result);
+      }
+    }
   }
   free_context(&ctx);
 
