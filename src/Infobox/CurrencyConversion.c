@@ -346,27 +346,7 @@ static void format_number(double val, char *buf, size_t bufsize) {
     snprintf(buf, bufsize, "0");
     return;
   }
-  if (fabs(val) < 0.01 && fabs(val) > 0) {
-    snprintf(buf, bufsize, "%.6f", val);
-  } else if (fabs(val) < 1) {
-    snprintf(buf, bufsize, "%.4f", val);
-    char *p = buf + strlen(buf) - 1;
-    while (p > buf && (*p == '0' || *p == '.')) {
-      if (*p == '.')
-        break;
-      *p-- = '\0';
-    }
-  } else if (fmod(val + 0.0001, 1.0) < 0.0002) {
-    snprintf(buf, bufsize, "%.0f", val);
-  } else {
-    snprintf(buf, bufsize, "%.2f", val);
-    char *p = buf + strlen(buf) - 1;
-    while (p > buf && (*p == '0' || *p == '.')) {
-      if (*p == '.')
-        break;
-      *p-- = '\0';
-    }
-  }
+  snprintf(buf, bufsize, "%.2f", val);
 }
 
 static char *build_html(double value, const CurrencyDef *from,
