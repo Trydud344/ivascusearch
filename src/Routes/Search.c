@@ -1,5 +1,6 @@
 #include "Search.h"
 #include "../Infobox/Calculator.h"
+#include "../Infobox/CurrencyConversion.h"
 #include "../Infobox/Dictionary.h"
 #include "../Infobox/UnitConversion.h"
 #include "../Infobox/Wikipedia.h"
@@ -129,6 +130,20 @@ static void *unit_thread_func(void *arg) {
   return NULL;
 }
 
+static void *currency_thread_func(void *arg) {
+  InfoBoxThreadData *data = (InfoBoxThreadData *)arg;
+
+  if (is_currency_query(data->query)) {
+    data->result = fetch_currency_data(data->query);
+    data->success =
+        (data->result.title != NULL && data->result.extract != NULL);
+  } else {
+    data->success = 0;
+  }
+
+  return NULL;
+}
+
 static int add_infobox_to_collection(InfoBox *infobox, char ****collection,
                                      int **inner_counts, int current_count) {
   *collection =
@@ -182,17 +197,19 @@ int results_handler(UrlParams *params) {
     return -1;
   }
 
-  pthread_t wiki_tid, calc_tid, dict_tid, unit_tid;
+  pthread_t wiki_tid, calc_tid, dict_tid, unit_tid, currency_tid;
   InfoBoxThreadData wiki_data = {.query = raw_query, .success = 0};
   InfoBoxThreadData calc_data = {.query = raw_query, .success = 0};
   InfoBoxThreadData dict_data = {.query = raw_query, .success = 0};
   InfoBoxThreadData unit_data = {.query = raw_query, .success = 0};
+  InfoBoxThreadData currency_data = {.query = raw_query, .success = 0};
 
   if (page == 1) {
     pthread_create(&wiki_tid, NULL, wiki_thread_func, &wiki_data);
     pthread_create(&calc_tid, NULL, calc_thread_func, &calc_data);
     pthread_create(&dict_tid, NULL, dict_thread_func, &dict_data);
     pthread_create(&unit_tid, NULL, unit_thread_func, &unit_data);
+    pthread_create(&currency_tid, NULL, currency_thread_func, &currency_data);
   }
 
   ScrapeJob jobs[ENGINE_COUNT];
@@ -219,6 +236,7 @@ int results_handler(UrlParams *params) {
     pthread_join(calc_tid, NULL);
     pthread_join(dict_tid, NULL);
     pthread_join(unit_tid, NULL);
+    pthread_join(currency_tid, NULL);
   }
 
   char ***infobox_matrix = NULL;
@@ -241,6 +259,12 @@ int results_handler(UrlParams *params) {
     if (unit_data.success) {
       infobox_count =
           add_infobox_to_collection(&unit_data.result, &infobox_matrix,
+                                    &infobox_inner_counts, infobox_count);
+    }
+
+    if (currency_data.success) {
+      infobox_count =
+          add_infobox_to_collection(&currency_data.result, &infobox_matrix,
                                     &infobox_inner_counts, infobox_count);
     }
 
@@ -353,6 +377,8 @@ int results_handler(UrlParams *params) {
       free_infobox(&dict_data.result);
     if (unit_data.success)
       free_infobox(&unit_data.result);
+    if (currency_data.success)
+      free_infobox(&currency_data.result);
   }
   free_context(&ctx);
 
