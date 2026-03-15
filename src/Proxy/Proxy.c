@@ -102,28 +102,19 @@ int load_proxy_list(const char *filename) {
     return 0;
   }
 
-  pthread_mutex_lock(&proxy_mutex);
-
-  if (proxy_list) {
-    free(proxy_list);
-    proxy_list = NULL;
-  }
-  proxy_count = 0;
-
   FILE *file = fopen(filename, "r");
   if (!file) {
-    pthread_mutex_unlock(&proxy_mutex);
     fprintf(stderr, "[WARN] Could not open proxy list file: %s\n", filename);
     return -1;
   }
 
-  int capacity = 16;
-  proxy_list = (Proxy *)malloc(capacity * sizeof(Proxy));
-  if (!proxy_list) {
+  int temp_capacity = 16;
+  Proxy *temp_list = (Proxy *)malloc(temp_capacity * sizeof(Proxy));
+  if (!temp_list) {
     fclose(file);
     return -1;
   }
-  proxy_count = 0;
+  int temp_count = 0;
 
   char line[512];
   while (fgets(line, sizeof(line), file)) {
@@ -151,24 +142,30 @@ int load_proxy_list(const char *filename) {
       continue;
     }
 
-    if (proxy_count >= capacity) {
-      capacity *= 2;
-      Proxy *new_list = (Proxy *)realloc(proxy_list, capacity * sizeof(Proxy));
+    if (temp_count >= temp_capacity) {
+      temp_capacity *= 2;
+      Proxy *new_list = (Proxy *)realloc(temp_list, temp_capacity * sizeof(Proxy));
       if (!new_list) {
-        free(proxy_list);
-        proxy_list = NULL;
-        proxy_count = 0;
+        free(temp_list);
         fclose(file);
-        pthread_mutex_unlock(&proxy_mutex);
         return -1;
       }
-      proxy_list = new_list;
+      temp_list = new_list;
     }
 
-    proxy_list[proxy_count++] = proxy;
+    temp_list[temp_count++] = proxy;
   }
 
   fclose(file);
+
+  pthread_mutex_lock(&proxy_mutex);
+
+  if (proxy_list) {
+    free(proxy_list);
+  }
+  proxy_list = temp_list;
+  proxy_count = temp_count;
+
   fprintf(stderr, "[INFO] Loaded %d proxies from %s\n", proxy_count, filename);
   pthread_mutex_unlock(&proxy_mutex);
   return proxy_count;
