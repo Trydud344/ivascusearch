@@ -46,6 +46,9 @@ static void extract_wiki_info(xmlNode *node, InfoBox *info) {
       if (strcmp((const char *)cur_node->name, "page") == 0) {
         xmlChar *title = xmlGetProp(cur_node, (const xmlChar *)"title");
         if (title) {
+          if (info->title) {
+            free(info->title);
+          }
           info->title = strdup((const char *)title);
 
           const char *base_article_url = "https://en.wikipedia.org/wiki/";
@@ -55,6 +58,9 @@ static void extract_wiki_info(xmlNode *node, InfoBox *info) {
               formatted_title[i] = '_';
           }
 
+          if (info->url) {
+            free(info->url);
+          }
           info->url =
               malloc(strlen(base_article_url) + strlen(formatted_title) + 1);
           if (info->url) {
@@ -69,6 +75,9 @@ static void extract_wiki_info(xmlNode *node, InfoBox *info) {
       if (strcmp((const char *)cur_node->name, "thumbnail") == 0) {
         xmlChar *source = xmlGetProp(cur_node, (const xmlChar *)"source");
         if (source) {
+          if (info->thumbnail_url) {
+            free(info->thumbnail_url);
+          }
           info->thumbnail_url = strdup((const char *)source);
           xmlFree(source);
         }
@@ -77,6 +86,9 @@ static void extract_wiki_info(xmlNode *node, InfoBox *info) {
       if (strcmp((const char *)cur_node->name, "extract") == 0) {
         xmlChar *content = xmlNodeGetContent(cur_node);
         if (content) {
+          if (info->extract) {
+            free(info->extract);
+          }
           info->extract = strdup((const char *)content);
 
           shorten_summary(&(info->extract), 300);
