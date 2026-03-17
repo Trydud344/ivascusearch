@@ -23,6 +23,13 @@
 #define INFOBOX_FIELD_COUNT 4
 #define MAX_RESULTS_PER_ENGINE 10
 
+#define CURL_TIMEOUT_SECS 15L
+#define CURL_DNS_TIMEOUT_SECS 300L
+
+#define BING_IMAGE_URL "https://www.bing.com/images/search"
+#define IMAGE_RESULTS_PER_PAGE 32
+#define IMAGE_RESULT_FIELDS 4
+
 typedef struct {
   char host[256];
   int port;
