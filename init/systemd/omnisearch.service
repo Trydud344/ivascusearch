@@ -1,0 +1,17 @@
+[Unit]
+Description=Omnisearch Web Search Server
+After=network.target
+
+[Service]
+Type=simple
+User=omnisearch
+Group=omnisearch
+WorkingDirectory=/etc/omnisearch
+ExecStart=/usr/bin/omnisearch
+Restart=always
+RestartSec=5
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

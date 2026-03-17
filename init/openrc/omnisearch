@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+
+name=omnisearch
+description="Omnisearch Web Search Server"
+command="/usr/bin/omnisearch"
+command_background=yes
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/omnisearch/omnisearch.log"
+error_log="/var/log/omnisearch/omnisearch.err"
+user=omnisearch
+group=omnisearch
+directory=/etc/omnisearch
+respawn_delay=5
+respawn_max=10
+
+depend() {
+    need net
+    after firewall
+}

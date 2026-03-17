@@ -1,0 +1,2 @@
+#!/bin/sh
+exec chpst -u omnisearch:omnisearch svlogd -tt /var/log/omnisearch

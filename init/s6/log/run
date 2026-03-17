@@ -1,0 +1,2 @@
+#!/bin/execlineb -P
+exec -c chpst -u omnisearch:omnisearch s6-log -d 3 /var/log/omnisearch
