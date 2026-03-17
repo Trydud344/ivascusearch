@@ -43,7 +43,7 @@ Depending on your system, you may first need to install libcurl and libxml2.
 # xbps-install -S libxml2-devel libcurl-devel
 ```
 
-Firstly, install libbeaker:
+Install libbeaker:
 ```
 $ git clone https://git.bwaaa.monster/beaker
 $ cd beaker
