@@ -62,7 +62,24 @@ Replace `<init>` with your init system (openrc,systemd,runit,s6)
 ## Hosting
 Run it normally behind a reverse proxy (like nginx)
 
+## Customisation
+To make your own changes while still being able to receive upstream updates:
+
+```
+$ git checkout -b my-changes
+```
+
+Make your changes in the cloned folder, then periodically merge upstream:
+
+```
+$ git fetch origin
+$ git merge origin/master
+```
+
+If there are conflicts in the files you modified, resolve them manually. You should also make the changes to the cloned repository, and then run the install command again if you installed omnisearch. Changes made directly to the configuration/assets folder will be overwritten on reinstall.
+
 ## Contribution
 Generate a patch with ```git format-patch HEAD~1``` and email to [gabriel@bwaaa.monster](mailto:gabriel@bwaaa.monster), beginning the subject line with [PATCH omnisearch] 
 
-*If you are sending a revised version of a previous patch, please use [PATCH omnisearch v2, v3, etc].*
+*If you are send
+ing a revised version of a previous patch, please use [PATCH omnisearch v2, v3, etc].*
