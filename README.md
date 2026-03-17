@@ -10,7 +10,7 @@ Create a config.ini, there is an example included in the root. Or if you install
 - libcurl (may be replaced in the future with curl-impersonate)
 - beaker [(source)](https://git.bwaaa.monster/beaker/)
 
-# First Setup
+## First Setup
 Depending on your system, you may first need to install libcurl and libxml2.
 
 ### Arch Linux
