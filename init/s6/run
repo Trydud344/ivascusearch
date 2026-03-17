@@ -1,3 +1,4 @@
-#!/bin/execlineb -P
+#! /bin/execlineb -P
 foreground { s6-setsid -g }
-exec -c chpst -u omnisearch:omnisearch /usr/bin/omnisearch
+cd /etc/omnisearch
+exec s6-setuidgid omnisearch /usr/bin/omnisearch

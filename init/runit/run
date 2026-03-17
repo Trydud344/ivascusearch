@@ -1,2 +1,3 @@
 #!/bin/sh
-exec chpst -u omnisearch:omnisearch /usr/bin/omnisearch 2>&1
+cd /etc/omnisearch
+exec chpst -u omnisearch:omnisearch /usr/bin/omnisearch

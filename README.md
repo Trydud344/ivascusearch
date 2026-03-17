@@ -11,6 +11,38 @@ Create a config.ini, there is an example included in the root.
 - beaker [(source)](https://git.bwaaa.monster/beaker/)
 
 # First Setup
+Depending on your system, you may first need to install libcurl and libxml2.
+
+### Arch Linux
+```
+# pacman -S libxml2 libcurl
+```
+
+### Debian/Ubuntu
+```
+# apt install libxml2-dev libcurl4-openssl-dev
+```
+
+### Fedora
+```
+# dnf install libxml2-devel libcurl-devel
+```
+
+### openSUSE
+```
+# zypper install libxml2-devel libcurl-devel
+```
+
+### Alpine
+```
+# apk add libxml2-dev curl-dev
+```
+
+### Void
+```
+# xbps-install -S libxml2-devel libcurl-devel
+```
+
 Firstly, install libbeaker:
 ```
 $ git clone https://git.bwaaa.monster/beaker
