@@ -2,6 +2,9 @@
 
 A modern lightweight metasearch engine with a clean design written in C.
 
+## Disclaimer
+I request that none of this code, in part or in full, be hosted on GitHub, SourceForge, or any other proprietary platform. This request is made out of respect for both me, the developer and for you, the user.
+
 ## Configuration
 Create a config.ini, there is an example included in the root. Or if you installed omnisearch, edit the config file at `/etc/omnisearch/config.ini`.
 
