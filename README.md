@@ -81,5 +81,4 @@ If there are conflicts in the files you modified, resolve them manually. You sho
 ## Contribution
 Generate a patch with ```git format-patch HEAD~1``` and email to [gabriel@bwaaa.monster](mailto:gabriel@bwaaa.monster), beginning the subject line with [PATCH omnisearch] 
 
-*If you are send
-ing a revised version of a previous patch, please use [PATCH omnisearch v2, v3, etc].*
+*If you are sending a revised version of a previous patch, please use [PATCH omnisearch v2, v3, etc].*
