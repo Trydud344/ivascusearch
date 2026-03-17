@@ -1,6 +1,6 @@
 # OmniSearch
 
-A modern lightweight metasearch engine with a clean design written in C. [You can try using it here!](https://search.bwaaa.monster/)
+A modern lightweight metasearch engine with a clean design written in C.
 
 ## Configuration
 Create a config.ini, there is an example included in the root.
@@ -10,12 +10,22 @@ Create a config.ini, there is an example included in the root.
 - libcurl (may be replaced in the future with curl-impersonate)
 - beaker [(source)](https://git.bwaaa.monster/beaker/)
 
-## Running
-```bash
-git clone https://git.bwaaa.monster/omnisearch/
-cd omnisearch
-make run
+# First Setup
+Firstly, install libbeaker:
 ```
+$ git clone https://git.bwaaa.monster/beaker
+$ cd beaker
+$ make
+# make install
+```
+And then install omnisearch:
+```
+$ git clone https://git.bwaaa.monster/omnisearch
+$ cd omnisearch
+$ make
+# make install-<init>
+```
+Replace `<init>` with your init system (openrc,systemd,runit,s6)
 
 ## Hosting
 Run it normally behind a reverse proxy (like nginx)
