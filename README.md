@@ -3,7 +3,7 @@
 A modern lightweight metasearch engine with a clean design written in C.
 
 ## Configuration
-Create a config.ini, there is an example included in the root.
+Create a config.ini, there is an example included in the root. Or if you installed omnisearch, edit the config file at `/etc/omnisearch/config.ini`.
 
 ## Dependencies
 - libxml2
