@@ -1,5 +1,7 @@
 #include "HttpClient.h"
+#include "../Cache/Cache.h"
 #include "../Proxy/Proxy.h"
+#include "Config.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,7 +11,8 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb,
   HttpResponse *mem = (HttpResponse *)userp;
 
   if (mem->size + realsize + 1 > mem->capacity) {
-    size_t new_cap = mem->capacity == 0 ? 16384 : mem->capacity * 2;
+    size_t new_cap =
+        mem->capacity == 0 ? INITIAL_BUFFER_SIZE : mem->capacity * 2;
     while (new_cap < mem->size + realsize + 1)
       new_cap *= 2;
 
@@ -35,11 +38,11 @@ HttpResponse http_get(const char *url, const char *user_agent) {
     return resp;
   }
 
-  resp.memory = malloc(16384);
+  resp.memory = malloc(INITIAL_BUFFER_SIZE);
   if (!resp.memory) {
     return resp;
   }
-  resp.capacity = 16384;
+  resp.capacity = INITIAL_BUFFER_SIZE;
 
   CURL *curl = curl_easy_init();
   if (!curl) {
@@ -78,4 +81,48 @@ void http_response_free(HttpResponse *resp) {
   resp->memory = NULL;
   resp->size = 0;
   resp->capacity = 0;
+}
+
+CachedHttpResponse cached_http_get(const char *url, const char *user_agent,
+                                   const char *cache_key, time_t cache_ttl,
+                                   XmlParserFn parser) {
+  CachedHttpResponse result = {
+      .memory = NULL, .size = 0, .parsed_result = NULL, .success = 0};
+
+  if (!url || !parser) {
+    return result;
+  }
+
+  if (cache_key && cache_ttl > 0) {
+    char *cached_data = NULL;
+    size_t cached_size = 0;
+    if (cache_get(cache_key, cache_ttl, &cached_data, &cached_size) == 0 &&
+        cached_data && cached_size > 0) {
+      xmlDocPtr doc = parser(cached_data, cached_size, url);
+      if (doc) {
+        result.parsed_result = doc;
+        result.success = 1;
+      }
+      free(cached_data);
+      return result;
+    }
+    free(cached_data);
+  }
+
+  HttpResponse resp = http_get(url, user_agent);
+  if (resp.memory && resp.size > 0) {
+    if (cache_key && cache_ttl > 0) {
+      cache_set(cache_key, resp.memory, resp.size);
+    }
+
+    xmlDocPtr doc = parser(resp.memory, resp.size, url);
+    if (doc) {
+      result.parsed_result = doc;
+      result.success = 1;
+    }
+  }
+
+  result.memory = resp.memory;
+  result.size = resp.size;
+  return result;
 }

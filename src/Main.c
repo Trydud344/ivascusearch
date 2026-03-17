@@ -33,50 +33,47 @@ int main() {
 
   curl_global_init(CURL_GLOBAL_DEFAULT);
 
-  Config config = {.host = "0.0.0.0",
-                   .port = 5000,
-                   .proxy = "",
-                   .proxy_list_file = "",
-                   .max_proxy_retries = 3,
-                   .randomize_username = 0,
-                   .randomize_password = 0,
-                   .cache_dir = "/tmp/omnisearch_cache",
-                   .cache_ttl_search = 3600,
-                   .cache_ttl_infobox = 86400};
+  Config cfg = {.host = DEFAULT_HOST,
+                .port = DEFAULT_PORT,
+                .proxy = "",
+                .proxy_list_file = "",
+                .max_proxy_retries = DEFAULT_MAX_PROXY_RETRIES,
+                .randomize_username = 0,
+                .randomize_password = 0,
+                .cache_dir = DEFAULT_CACHE_DIR,
+                .cache_ttl_search = DEFAULT_CACHE_TTL_SEARCH,
+                .cache_ttl_infobox = DEFAULT_CACHE_TTL_INFOBOX};
 
-  if (load_config("config.ini", &config) != 0) {
-    fprintf(stderr, "Warning: Could not load config file, using defaults\n");
+  if (load_config("config.ini", &cfg) != 0) {
+    fprintf(stderr, "[WARN] Could not load config file, using defaults\n");
   }
 
-  if (cache_init(config.cache_dir) != 0) {
-    fprintf(
-        stderr,
-        "Warning: Failed to initialize cache, continuing without caching\n");
+  if (cache_init(cfg.cache_dir) != 0) {
+    fprintf(stderr,
+            "[WARN] Failed to initialize cache, continuing without caching\n");
   } else {
-    fprintf(stderr, "Cache initialized at %s\n", config.cache_dir);
-    cache_cleanup(config.cache_ttl_search);
+    fprintf(stderr, "[INFO] Cache initialized at %s\n", cfg.cache_dir);
+    cache_cleanup(cfg.cache_ttl_search);
   }
 
-  set_cache_ttl_search(config.cache_ttl_search);
-  set_cache_ttl_infobox(config.cache_ttl_infobox);
+  set_cache_ttl_search(cfg.cache_ttl_search);
+  set_cache_ttl_infobox(cfg.cache_ttl_infobox);
 
-  if (config.proxy_list_file[0] != '\0') {
-    if (load_proxy_list(config.proxy_list_file) < 0) {
-      fprintf(
-          stderr,
-          "Warning: Failed to load proxy list, continuing without proxies\n");
+  if (cfg.proxy_list_file[0] != '\0') {
+    if (load_proxy_list(cfg.proxy_list_file) < 0) {
+      fprintf(stderr,
+              "[WARN] Failed to load proxy list, continuing without proxies\n");
     }
   }
 
-  max_proxy_retries = config.max_proxy_retries;
-  set_proxy_config(config.proxy, config.randomize_username,
-                   config.randomize_password);
+  max_proxy_retries = cfg.max_proxy_retries;
+  set_proxy_config(cfg.proxy, cfg.randomize_username, cfg.randomize_password);
 
   if (proxy_url[0] != '\0') {
-    fprintf(stderr, "Using proxy: %s\n", proxy_url);
+    fprintf(stderr, "[INFO] Using proxy: %s\n", proxy_url);
   } else if (proxy_count > 0) {
-    fprintf(stderr, "Using %d proxies from %s\n", proxy_count,
-            config.proxy_list_file);
+    fprintf(stderr, "[INFO] Using %d proxies from %s\n", proxy_count,
+            cfg.proxy_list_file);
   }
 
   set_handler("/", home_handler);
@@ -85,12 +82,12 @@ int main() {
   set_handler("/images", images_handler);
   set_handler("/proxy", image_proxy_handler);
 
-  fprintf(stderr, "Starting Omnisearch on %s:%d\n", config.host, config.port);
+  fprintf(stderr, "[INFO] Starting Omnisearch on %s:%d\n", cfg.host, cfg.port);
 
-  int result = beaker_run(config.host, config.port);
+  int result = beaker_run(cfg.host, cfg.port);
 
   if (result != 0) {
-    fprintf(stderr, "Error: Beaker server failed to start.\n");
+    fprintf(stderr, "[ERROR] Beaker server failed to start.\n");
     curl_global_cleanup();
     xmlCleanupParser();
     return EXIT_FAILURE;

@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "Config.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,7 @@ char *pretty_display_url(const char *input) {
   }
 
   size_t input_len = strlen(start);
-  char temp[512];
+  char temp[BUFFER_SIZE_MEDIUM];
   strncpy(temp, start, sizeof(temp) - 1);
   temp[sizeof(temp) - 1] = '\0';
 

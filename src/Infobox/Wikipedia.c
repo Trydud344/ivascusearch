@@ -2,6 +2,7 @@
 #include "../Cache/Cache.h"
 #include "../Scraping/Scraping.h"
 #include "../Utility/HttpClient.h"
+#include "Config.h"
 #include <curl/curl.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -91,7 +92,7 @@ static void extract_wiki_info(xmlNode *node, InfoBox *info) {
           }
           info->extract = strdup((const char *)content);
 
-          shorten_summary(&(info->extract), 300);
+          shorten_summary(&(info->extract), WIKI_SUMMARY_MAX_CHARS);
           xmlFree(content);
         }
       }

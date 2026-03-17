@@ -1,6 +1,28 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define DEFAULT_HOST "0.0.0.0"
+#define DEFAULT_PORT 5000
+#define DEFAULT_CACHE_DIR "/tmp/omnisearch_cache"
+#define DEFAULT_CACHE_TTL_SEARCH 3600
+#define DEFAULT_CACHE_TTL_INFOBOX 86400
+#define DEFAULT_MAX_PROXY_RETRIES 3
+
+#define BUFFER_SIZE_SMALL 256
+#define BUFFER_SIZE_MEDIUM 512
+#define BUFFER_SIZE_LARGE 1024
+#define BUFFER_SIZE_XLARGE 2048
+
+#define INITIAL_BUFFER_SIZE 16384
+
+#define WIKI_SUMMARY_MAX_CHARS 300
+
+#define MD5_HASH_LEN 32
+#define HEX_CHARS "0123456789abcdef"
+
+#define INFOBOX_FIELD_COUNT 4
+#define MAX_RESULTS_PER_ENGINE 10
+
 typedef struct {
   char host[256];
   int port;

@@ -3,6 +3,7 @@
 #include "../Proxy/Proxy.h"
 #include "../Utility/Unescape.h"
 #include "../Utility/XmlHelper.h"
+#include "Config.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
 #include <libxml/xpath.h>
@@ -18,8 +19,8 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb,
   MemoryBuffer *mem = (MemoryBuffer *)userp;
 
   if (mem->size + realsize + 1 > mem->capacity) {
-
-    size_t new_cap = mem->capacity == 0 ? 16384 : mem->capacity * 2;
+    size_t new_cap =
+        mem->capacity == 0 ? INITIAL_BUFFER_SIZE : mem->capacity * 2;
     while (new_cap < mem->size + realsize + 1)
       new_cap *= 2;
 
@@ -38,7 +39,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb,
   return realsize;
 }
 
-static const char *get_random_user_agent() {
+static const char *get_random_user_agent(void) {
   static const char *agents[] = {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
       "like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -324,6 +325,9 @@ const SearchEngine ENGINE_REGISTRY[] = {
 
 const int ENGINE_COUNT = sizeof(ENGINE_REGISTRY) / sizeof(SearchEngine);
 
+#define CURL_TIMEOUT 15L
+#define CURL_DNS_TIMEOUT 300L
+
 static void configure_curl_handle(CURL *curl, const char *full_url,
                                   MemoryBuffer *chunk,
                                   struct curl_slist *headers) {
@@ -335,9 +339,9 @@ static void configure_curl_handle(CURL *curl, const char *full_url,
 
   curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
   curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
-  curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 300L);
+  curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, CURL_DNS_TIMEOUT);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, CURL_TIMEOUT);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
   curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
 
@@ -348,19 +352,19 @@ static char *build_search_url(const char *base_url, const char *page_param,
                               int page_multiplier, int page_base,
                               const char *encoded_query, int page) {
   int page_value = (page < 1 ? 1 : page - 1) * page_multiplier + page_base;
-  char *url = malloc(1024);
+  char *url = malloc(BUFFER_SIZE_LARGE);
   if (!url) {
     return NULL;
   }
-  snprintf(url, 1024, "%s%s&%s=%d", base_url, encoded_query, page_param,
-           page_value);
+  snprintf(url, BUFFER_SIZE_LARGE, "%s%s&%s=%d", base_url, encoded_query,
+           page_param, page_value);
   return url;
 }
 
 static struct curl_slist *build_request_headers(const char *host_header,
                                                 const char *referer) {
   struct curl_slist *headers = NULL;
-  char host_buf[256], ref_buf[256];
+  char host_buf[BUFFER_SIZE_MEDIUM], ref_buf[BUFFER_SIZE_MEDIUM];
 
   snprintf(host_buf, sizeof(host_buf), "Host: %s", host_header);
   snprintf(ref_buf, sizeof(ref_buf), "Referer: %s", referer);
@@ -486,9 +490,9 @@ retry:
       continue;
     }
 
-    job->response.memory = (char *)malloc(16384);
+    job->response.memory = (char *)malloc(INITIAL_BUFFER_SIZE);
     job->response.size = 0;
-    job->response.capacity = 16384;
+    job->response.capacity = INITIAL_BUFFER_SIZE;
 
     struct curl_slist *headers =
         build_request_headers(job->engine->host_header, job->engine->referer);

@@ -13,7 +13,6 @@ int load_config(const char *filename, Config *config) {
   char section[64] = "";
 
   while (fgets(line, sizeof(line), file)) {
-
     line[strcspn(line, "\r\n")] = 0;
 
     if (line[0] == '\0' || line[0] == '#' || line[0] == ';') {

@@ -1,4 +1,5 @@
 #include "Cache.h"
+#include "Config.h"
 #include <dirent.h>
 #include <openssl/evp.h>
 #include <stdio.h>
@@ -7,9 +8,9 @@
 #include <sys/stat.h>
 #include <time.h>
 
-static char cache_dir[512] = {0};
-static int cache_ttl_search_val = 3600;
-static int cache_ttl_infobox_val = 86400;
+static char cache_dir[BUFFER_SIZE_MEDIUM] = {0};
+static int cache_ttl_search_val = DEFAULT_CACHE_TTL_SEARCH;
+static int cache_ttl_infobox_val = DEFAULT_CACHE_TTL_INFOBOX;
 
 void set_cache_ttl_search(int ttl) { cache_ttl_search_val = ttl; }
 
@@ -44,7 +45,8 @@ static time_t get_file_mtime(const char *filepath) {
 
 int cache_init(const char *dir) {
   if (!dir || strlen(dir) == 0) {
-    strcpy(cache_dir, "/tmp/omnisearch_cache");
+    strncpy(cache_dir, DEFAULT_CACHE_DIR, sizeof(cache_dir) - 1);
+    cache_dir[sizeof(cache_dir) - 1] = '\0';
   } else {
     strncpy(cache_dir, dir, sizeof(cache_dir) - 1);
     cache_dir[sizeof(cache_dir) - 1] = '\0';
@@ -53,19 +55,20 @@ int cache_init(const char *dir) {
   struct stat st;
   if (stat(cache_dir, &st) != 0) {
     if (mkdir(cache_dir, 0755) != 0) {
-      fprintf(stderr, "Failed to create cache directory: %s\n", cache_dir);
+      fprintf(stderr, "[ERROR] Failed to create cache directory: %s\n",
+              cache_dir);
       return -1;
     }
   } else if (!S_ISDIR(st.st_mode)) {
-    fprintf(stderr, "Cache path exists but is not a directory: %s\n",
+    fprintf(stderr, "[ERROR] Cache path exists but is not a directory: %s\n",
             cache_dir);
     return -1;
   }
 
-  char subdirs[] = "0123456789abcdef";
-  for (int i = 0; subdirs[i]; i++) {
-    char subdir_path[1024];
-    snprintf(subdir_path, sizeof(subdir_path), "%s/%c", cache_dir, subdirs[i]);
+  for (int i = 0; HEX_CHARS[i]; i++) {
+    char subdir_path[BUFFER_SIZE_LARGE];
+    snprintf(subdir_path, sizeof(subdir_path), "%s/%c", cache_dir,
+             HEX_CHARS[i]);
     if (stat(subdir_path, &st) != 0) {
       mkdir(subdir_path, 0755);
     }
@@ -77,11 +80,11 @@ int cache_init(const char *dir) {
 void cache_shutdown(void) { cache_dir[0] = '\0'; }
 
 char *cache_compute_key(const char *query, int page, const char *engine_name) {
-  char key_buffer[1024];
+  char key_buffer[BUFFER_SIZE_LARGE];
   snprintf(key_buffer, sizeof(key_buffer), "%s_%d_%s", query ? query : "", page,
            engine_name ? engine_name : "");
 
-  char *hash = malloc(33);
+  char *hash = malloc(MD5_HASH_LEN + 1);
   if (!hash) {
     return NULL;
   }
@@ -95,7 +98,7 @@ int cache_get(const char *key, time_t max_age, char **out_data,
     return -1;
   }
 
-  char filepath[1024];
+  char filepath[BUFFER_SIZE_LARGE];
   snprintf(filepath, sizeof(filepath), "%s/%c/%s.cache", cache_dir, key[0],
            key);
 
@@ -149,7 +152,7 @@ int cache_set(const char *key, const char *data, size_t size) {
     return -1;
   }
 
-  char filepath[1024];
+  char filepath[BUFFER_SIZE_LARGE];
   snprintf(filepath, sizeof(filepath), "%s/%c/%s.cache", cache_dir, key[0],
            key);
 
@@ -176,11 +179,11 @@ void cache_cleanup(time_t max_age) {
 
   time_t now = time(NULL);
   time_t cutoff = now - max_age;
-  char subdirs[] = "0123456789abcdef";
 
-  for (int d = 0; subdirs[d]; d++) {
-    char subdir_path[1024];
-    snprintf(subdir_path, sizeof(subdir_path), "%s/%c", cache_dir, subdirs[d]);
+  for (int d = 0; HEX_CHARS[d]; d++) {
+    char subdir_path[BUFFER_SIZE_LARGE];
+    snprintf(subdir_path, sizeof(subdir_path), "%s/%c", cache_dir,
+             HEX_CHARS[d]);
 
     DIR *dir = opendir(subdir_path);
     if (!dir)
@@ -190,7 +193,7 @@ void cache_cleanup(time_t max_age) {
     while ((entry = readdir(dir)) != NULL) {
       size_t len = strlen(entry->d_name);
       if (len > 7 && strcmp(entry->d_name + len - 7, ".cache") == 0) {
-        char filepath[2048];
+        char filepath[BUFFER_SIZE_XLARGE];
         snprintf(filepath, sizeof(filepath), "%s/%s", subdir_path,
                  entry->d_name);
 

@@ -7,15 +7,13 @@
 #include "../Scraping/Scraping.h"
 #include "../Utility/Display.h"
 #include "../Utility/Unescape.h"
+#include "Config.h"
 #include <ctype.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#define INFOBOX_FIELD_COUNT 4
-#define MAX_RESULTS_PER_ENGINE 10
 
 typedef struct {
   const char *query;
