@@ -6,7 +6,7 @@ A modern lightweight metasearch engine with a clean design written in C.
 I request that none of this code, in part or in full, be hosted on GitHub, SourceForge, or any other proprietary platform. This request is made out of respect for both me, the developer and for you, the user.
 
 ## Configuration
-Create a config.ini, there is an example included in the root. Or if you installed omnisearch, edit the config file at `/etc/omnisearch/config.ini`.
+Create a config.ini, there is an example included in the root. Or if you installed omnisearch, edit the installed config file.
 
 ## Dependencies
 - libxml2
@@ -46,13 +46,27 @@ Depending on your system, you may first need to install libcurl and libxml2.
 # xbps-install -S libxml2-devel libcurl-devel
 ```
 
+### macOS (Homebrew)
+```
+$ brew install libxml2 curl openssl pkg-config
+```
+
+### macOS (MacPorts)
+```
+# port install libxml2 curl openssl3 pkgconfig
+```
+
+On macOS the build uses `pkg-config` to discover `libxml2`, `libcurl` and OpenSSL flags.
+
 Install libbeaker:
 ```
 $ git clone https://git.bwaaa.monster/beaker
 $ cd beaker
-$ make
 # make install
 ```
+
+On macOS `beaker` installs to `/usr/local/` by default and installs `libbeaker.dylib`.
+
 And then install omnisearch:
 ```
 $ git clone https://git.bwaaa.monster/omnisearch
@@ -60,7 +74,8 @@ $ cd omnisearch
 $ make
 # make install-<init>
 ```
-Replace `<init>` with your init system (openrc,systemd,runit,s6,dinit)
+Replace `<init>` with your init system (`openrc`, `systemd`, `runit`, `s6`, `dinit`, `launchd`).
+On macOS, use `install-launchd`.
 
 ## Hosting
 Run it normally behind a reverse proxy (like nginx)

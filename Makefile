@@ -1,8 +1,19 @@
 CC      := cc
-CFLAGS  := -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2
-LDFLAGS :=
+UNAME_S := $(shell uname -s)
+PKG_CONFIG ?= pkg-config
+PKG_DEPS   := libxml-2.0 libcurl openssl
 
+ifeq ($(UNAME_S),Darwin)
+DEP_CFLAGS := $(shell $(PKG_CONFIG) --cflags $(PKG_DEPS) 2>/dev/null)
+DEP_LIBS   := $(shell $(PKG_CONFIG) --libs $(PKG_DEPS) 2>/dev/null)
+CFLAGS  := -Wall -Wextra -O2 -Isrc $(DEP_CFLAGS)
+LIBS    := -lbeaker $(DEP_LIBS) -lpthread -lm
+else
+CFLAGS  := -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2
 LIBS    := -lbeaker -lcurl -lxml2 -lpthread -lm -lssl -lcrypto
+endif
+
+LDFLAGS :=
 
 SRC_DIR := src
 BIN_DIR := bin
@@ -44,19 +55,32 @@ info:
 	@echo "Object files to generate:"
 	@echo "$(OBJS)" | tr ' ' '\n'
 
+ifeq ($(UNAME_S),Darwin)
+PREFIX      ?= /usr/local
+DATA_DIR    ?= $(PREFIX)/etc/omnisearch
+CONF_DIR    ?= $(DATA_DIR)
+VAR_DIR     ?= $(PREFIX)/var/lib/omnisearch
+LOG_DIR     ?= $(PREFIX)/var/log/omnisearch
+CACHE_DIR   ?= $(PREFIX)/var/cache/omnisearch
+else
 PREFIX      ?= /usr
+DATA_DIR    ?= /etc/omnisearch
+CONF_DIR    ?= /etc/omnisearch
+VAR_DIR     ?= /var/lib/omnisearch
+LOG_DIR     ?= /var/log/omnisearch
+CACHE_DIR   ?= /var/cache/omnisearch
+endif
+
 INSTALL_BIN_DIR := $(PREFIX)/bin
-DATA_DIR    := /etc/omnisearch
-CONF_DIR    := /etc/omnisearch
-VAR_DIR     := /var/lib/omnisearch
-LOG_DIR     := /var/log/omnisearch
-CACHE_DIR   := /var/cache/omnisearch
 USER        := omnisearch
 GROUP       := omnisearch
 
 SYSTEMD_DIR := /etc/systemd/system
 OPENRC_DIR  := /etc/init.d
 DINIT_DIR   := /etc/dinit.d
+LAUNCHD_DIR ?= /Library/LaunchDaemons
+LAUNCHD_LABEL ?= monster.bwaaa.omnisearch
+LAUNCHD_PLIST := $(LAUNCHD_DIR)/$(LAUNCHD_LABEL).plist
 
 install:
 	@echo "Available install targets:"
@@ -65,8 +89,30 @@ install:
 	@echo "  make install-runit"
 	@echo "  make install-s6"
 	@echo "  make install-dinit"
+	@if [ "$(UNAME_S)" = "Darwin" ]; then echo "  make install-launchd"; fi
 	@echo ""
 	@echo "Example: doas/sudo make install-openrc"
+
+install-launchd: $(TARGET)
+	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(INSTALL_BIN_DIR) $(LOG_DIR)
+	@cp -rf templates/* $(DATA_DIR)/templates/
+	@cp -rf static/* $(DATA_DIR)/static/
+	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
+	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
+	@mkdir -p $(LAUNCHD_DIR)
+	@sed \
+		-e 's|@INSTALL_BIN_DIR@|$(INSTALL_BIN_DIR)|g' \
+		-e 's|@DATA_DIR@|$(DATA_DIR)|g' \
+		-e 's|@LOG_DIR@|$(LOG_DIR)|g' \
+		-e 's|@LAUNCHD_LABEL@|$(LAUNCHD_LABEL)|g' \
+		init/launchd/omnisearch.plist.in > $(LAUNCHD_PLIST)
+	@chmod 644 $(LAUNCHD_PLIST)
+	@echo ""
+	@echo "Config: $(DATA_DIR)/config.ini"
+	@echo "Installed launchd plist to $(LAUNCHD_PLIST)"
+	@echo "Load with: sudo launchctl bootstrap system $(LAUNCHD_PLIST)"
+	@echo "Enable with: sudo launchctl enable system/$(LAUNCHD_LABEL)"
+	@echo "Start with: sudo launchctl kickstart -k system/$(LAUNCHD_LABEL)"
 
 install-systemd: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
@@ -176,4 +222,4 @@ uninstall:
 	@grep -q '^$(GROUP):' /etc/group 2>/dev/null && groupdel $(GROUP) 2>/dev/null || true
 	@echo "Uninstalled omnisearch"
 
-.PHONY: all run clean rebuild info install install-systemd install-openrc install-runit install-s6 install-dinit uninstall
+.PHONY: all run clean rebuild info install install-launchd install-systemd install-openrc install-runit install-s6 install-dinit uninstall
