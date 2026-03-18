@@ -16,6 +16,32 @@ Create a config.ini, there is an example included in the root. Or if you install
 ## First Setup
 Depending on your system, you may first need to install libcurl and libxml2.
 
+### Nixos
+Add the flake to your inputs and import the module. That is all you need.
+Here's an example of using the modules in a flake:
+```
+# flake.nix
+{
+  inputs = { 
+    omnisearch = {
+      url = "git+https://git.bwaaa.monster/omnisearch";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, omnisearch, ... }: {
+    nixosConfigurations.mySystem = nixpkgs.lib.nixosSystem {
+      modules = [
+        omnisearch.nixosModules.default
+        {
+          services.omnisearch.enable = true;
+        }
+      ];
+    };
+  };
+}
+```
+
 ### Arch Linux
 ```
 # pacman -S libxml2 libcurl
