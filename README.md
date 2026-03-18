@@ -46,16 +46,6 @@ Depending on your system, you may first need to install libcurl and libxml2.
 # xbps-install -S libxml2-devel libcurl-devel
 ```
 
-### macOS (Homebrew)
-```
-$ brew install libxml2 curl openssl pkg-config
-```
-
-### macOS (MacPorts)
-```
-# port install libxml2 curl openssl3 pkgconfig
-```
-
 ### Nixos
 Add the flake to your inputs and import the module. That is all you need.
 Here's an example of using the modules in a flake:
@@ -82,8 +72,15 @@ Here's an example of using the modules in a flake:
 }
 ```
 
+### macOS (Homebrew)
+```
+$ brew install libxml2 curl openssl pkg-config
+```
 
-
+### macOS (MacPorts)
+```
+# port install libxml2 curl openssl3 pkgconfig
+```
 
 On macOS the build uses `pkg-config` to discover `libxml2`, `libcurl` and OpenSSL flags.
 
