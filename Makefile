@@ -169,7 +169,7 @@ install-runit: $(TARGET)
 	@echo "Installed runit service to /etc/service/omnisearch"
 	@echo "You need to start the service manually"
 	@echo "Void: ln -s /etc/service/omnisearch/ /var/service"
-	@echo "Artix: Idk I don't use artix -crumpet"
+	@echo "Artix: ln -s /etc/service/omnisearch/ /run/runit/"
 
 install-s6: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
