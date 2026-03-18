@@ -6,7 +6,97 @@
 #include <libxml/HTMLparser.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
+
+static int response_contains(const char *response, const char *needle) {
+  return response && needle && strstr(response, needle) != NULL;
+}
+
+static int is_startpage_job(const ScrapeJob *job) {
+  return job && job->engine && strcmp(job->engine->name, "Startpage") == 0;
+}
+
+static int response_is_startpage_captcha(const ScrapeJob *job,
+                                         const char *response) {
+  if (!is_startpage_job(job))
+    return 0;
+
+  return response_contains(response, "<title>Startpage Captcha</title>") ||
+         response_contains(response, "Startpage Captcha") ||
+         response_contains(response, "/static-pages-assets/page-data/captcha/");
+}
+
+static int response_looks_like_results_page(const ScrapeJob *job,
+                                            const char *response) {
+  if (!job || !job->engine || !response)
+    return 0;
+
+  if (strcmp(job->engine->name, "DuckDuckGo Lite") == 0) {
+    return response_contains(response, "result-link") ||
+           response_contains(response, "result-snippet");
+  }
+
+  if (strcmp(job->engine->name, "Startpage") == 0) {
+    return response_contains(response, "<title>Startpage Search Results</title>") ||
+           response_contains(response, "class=\"w-gl") ||
+           response_contains(response, "data-testid=\"gl-title-link\"");
+  }
+
+  if (strcmp(job->engine->name, "Yahoo") == 0) {
+    return response_contains(response, "algo-sr") ||
+           response_contains(response, "compTitle") ||
+           response_contains(response, "compText");
+  }
+
+  return 0;
+}
+
+static void classify_job_response(ScrapeJob *job, const char *response,
+                                  size_t response_size) {
+  job->results_count = 0;
+
+  if (!response || response_size == 0) {
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
+    return;
+  }
+
+  if (response_is_startpage_captcha(job, response)) {
+    job->status = SCRAPE_STATUS_BLOCKED;
+    return;
+  }
+
+  xmlDocPtr doc = htmlReadMemory(response, response_size, NULL, NULL,
+                                 HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
+                                     HTML_PARSE_NOWARNING);
+
+  if (!doc) {
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
+    return;
+  }
+
+  job->results_count =
+      job->engine->parser(job->engine->name, doc, job->out_results,
+                          job->max_results);
+  xmlFreeDoc(doc);
+
+  if (job->results_count > 0) {
+    job->status = SCRAPE_STATUS_OK;
+    return;
+  }
+
+  if (job->http_status >= 400) {
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
+    return;
+  }
+
+  if (response_looks_like_results_page(job, response)) {
+    job->status = SCRAPE_STATUS_PARSE_MISMATCH;
+    return;
+  }
+
+  job->status = SCRAPE_STATUS_EMPTY;
+}
 
 int check_cache_for_job(ScrapeJob *job) {
   if (get_cache_ttl_search() <= 0)
@@ -22,14 +112,14 @@ int check_cache_for_job(ScrapeJob *job) {
   if (cache_get(key, (time_t)get_cache_ttl_search(), &cached_data,
                 &cached_size) == 0 &&
       cached_data && cached_size > 0) {
-    xmlDocPtr doc = htmlReadMemory(cached_data, cached_size, NULL, NULL,
-                                   HTML_PARSE_RECOVER | HTML_PARSE_NOERROR |
-                                       HTML_PARSE_NOWARNING);
-    if (doc) {
-      job->results_count = job->engine->parser(
-          job->engine->name, doc, job->out_results, job->max_results);
-      xmlFreeDoc(doc);
+    classify_job_response(job, cached_data, cached_size);
+
+    if (job->status == SCRAPE_STATUS_BLOCKED) {
+      free(cached_data);
+      free(key);
+      return 0;
     }
+
     free(cached_data);
     free(key);
 
@@ -46,24 +136,17 @@ int check_cache_for_job(ScrapeJob *job) {
 void parse_and_cache_response(ScrapeJob *job) {
   if (job->response.size == 0) {
     job->results_count = 0;
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
     return;
   }
 
-  char *key = cache_compute_key(job->query, job->page, job->engine->name);
-  if (key && get_cache_ttl_search() > 0)
-    cache_set(key, job->response.memory, job->response.size);
-  free(key);
+  classify_job_response(job, job->response.memory, job->response.size);
 
-  xmlDocPtr doc = htmlReadMemory(
-      job->response.memory, job->response.size, NULL, NULL,
-      HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
-
-  if (doc) {
-    job->results_count = job->engine->parser(
-        job->engine->name, doc, job->out_results, job->max_results);
-    xmlFreeDoc(doc);
-  } else {
-    job->results_count = 0;
+  if (job->status == SCRAPE_STATUS_OK || job->status == SCRAPE_STATUS_EMPTY) {
+    char *key = cache_compute_key(job->query, job->page, job->engine->name);
+    if (key && get_cache_ttl_search() > 0)
+      cache_set(key, job->response.memory, job->response.size);
+    free(key);
   }
 }
 
@@ -78,10 +161,14 @@ void cleanup_job_handle(ScrapeJob *job, CURL *handle) {
 }
 
 void process_response(ScrapeJob *job, CURL *handle, CURLMsg *msg) {
+  curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &job->http_status);
+
   if (msg->data.result == CURLE_OK)
     parse_and_cache_response(job);
-  else
+  else {
     job->results_count = 0;
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
+  }
 
   cleanup_job_handle(job, handle);
 }
@@ -92,14 +179,20 @@ int setup_job(ScrapeJob *job, CURLM *multi_handle) {
   if (job->response.memory)
     free(job->response.memory);
 
+  job->results_count = 0;
+  job->http_status = 0;
+  job->status = SCRAPE_STATUS_PENDING;
+
   if (check_cache_for_job(job)) {
     job->results_count = job->results_count > 0 ? job->results_count : 0;
     return 0;
   }
 
   char *encoded_query = curl_easy_escape(NULL, job->query, 0);
-  if (!encoded_query)
+  if (!encoded_query) {
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
     return -1;
+  }
 
   char *full_url =
       build_search_url(job->engine->base_url, job->engine->page_param,
@@ -107,12 +200,15 @@ int setup_job(ScrapeJob *job, CURLM *multi_handle) {
                        encoded_query, job->page);
   free(encoded_query);
 
-  if (!full_url)
+  if (!full_url) {
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
     return -1;
+  }
 
   job->handle = curl_easy_init();
   if (!job->handle) {
     free(full_url);
+    job->status = SCRAPE_STATUS_FETCH_ERROR;
     return -1;
   }
 
@@ -160,7 +256,8 @@ int should_retry(ScrapeJob *jobs, int num_jobs) {
     return 0;
 
   for (int i = 0; i < num_jobs; i++) {
-    if (jobs[i].results_count == 0 && jobs[i].response.size == 0)
+    if (jobs[i].status == SCRAPE_STATUS_FETCH_ERROR ||
+        jobs[i].status == SCRAPE_STATUS_BLOCKED)
       return 1;
   }
   return 0;
@@ -170,6 +267,7 @@ int scrape_engines_parallel(ScrapeJob *jobs, int num_jobs) {
   int retries = 0;
 
 retry:
+  ;
   CURLM *multi_handle = curl_multi_init();
   if (!multi_handle)
     return -1;
@@ -213,7 +311,9 @@ int scrape_engine(const SearchEngine *engine, const char *query,
                    .out_results = out_results,
                    .max_results = max_results,
                    .results_count = 0,
-                   .page = 1};
+                   .page = 1,
+                   .http_status = 0,
+                   .status = SCRAPE_STATUS_PENDING};
 
   scrape_engines_parallel(&job, 1);
   return job.results_count;

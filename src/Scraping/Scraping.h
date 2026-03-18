@@ -32,6 +32,15 @@ typedef struct {
   size_t capacity;
 } MemoryBuffer;
 
+typedef enum {
+  SCRAPE_STATUS_PENDING,
+  SCRAPE_STATUS_OK,
+  SCRAPE_STATUS_EMPTY,
+  SCRAPE_STATUS_FETCH_ERROR,
+  SCRAPE_STATUS_PARSE_MISMATCH,
+  SCRAPE_STATUS_BLOCKED,
+} ScrapeStatus;
+
 typedef struct {
   const SearchEngine *engine;
   char *query;
@@ -41,6 +50,8 @@ typedef struct {
   CURL *handle;
   MemoryBuffer response;
   int results_count;
+  long http_status;
+  ScrapeStatus status;
 } ScrapeJob;
 
 extern const SearchEngine ENGINE_REGISTRY[];

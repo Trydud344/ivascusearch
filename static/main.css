@@ -275,6 +275,30 @@ h1 span {
 .results-container {
     grid-column:2;
 }
+.engine-warning-list {
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-bottom:24px;
+}
+.engine-warning {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-left:4px solid var(--accent);
+    border-radius:12px;
+    padding:14px 16px;
+}
+.engine-warning-title {
+    display:block;
+    font-size:0.95rem;
+    font-weight:700;
+    margin-bottom:4px;
+}
+.engine-warning-copy {
+    color:var(--text-muted);
+    line-height:1.5;
+    margin:0;
+}
 .result {
     margin-bottom:32px;
 }
@@ -453,6 +477,9 @@ h1 span {
     }
     .result {
         margin-bottom:24px;
+    }
+    .engine-warning {
+        padding:12px 14px;
     }
     .result a {
         font-size:1.1rem;
