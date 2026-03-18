@@ -62,6 +62,7 @@ Install libbeaker:
 ```
 $ git clone https://git.bwaaa.monster/beaker
 $ cd beaker
+$ make
 # make install
 ```
 
