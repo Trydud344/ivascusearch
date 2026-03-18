@@ -32,6 +32,10 @@ int check_cache_for_job(ScrapeJob *job) {
     }
     free(cached_data);
     free(key);
+
+    if (job->results_count == 0)
+      return 0;
+
     return 1;
   }
 
