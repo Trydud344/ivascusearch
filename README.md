@@ -46,7 +46,7 @@ Depending on your system, you may first need to install libcurl and libxml2.
 # xbps-install -S libxml2-devel libcurl-devel
 ```
 
-### Nixos
+### NixOS
 Add the flake to your inputs and import the module. That is all you need.
 Here's an example of using the modules in a flake:
 ```
