@@ -72,7 +72,7 @@ install-systemd: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
 	@cp -rf templates/* $(DATA_DIR)/templates/
 	@cp -rf static/* $(DATA_DIR)/static/
-	@cp -n example-config.ini $(DATA_DIR)/config.ini
+	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
 	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
 	@echo "Setting up user '$(USER)'..."
 	@(grep -q '^$(GROUP):' /etc/group || groupadd $(GROUP)) 2>/dev/null || true
@@ -90,7 +90,7 @@ install-openrc: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
 	@cp -rf templates/* $(DATA_DIR)/templates/
 	@cp -rf static/* $(DATA_DIR)/static/
-	@cp -n example-config.ini $(DATA_DIR)/config.ini
+	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
 	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
 	@echo "Setting up user '$(USER)'..."
 	@(grep -q '^$(GROUP):' /etc/group || groupadd $(GROUP)) 2>/dev/null || true
@@ -108,7 +108,7 @@ install-runit: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
 	@cp -rf templates/* $(DATA_DIR)/templates/
 	@cp -rf static/* $(DATA_DIR)/static/
-	@cp -n example-config.ini $(DATA_DIR)/config.ini
+	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
 	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
 	@echo "Setting up user '$(USER)'..."
 	@(grep -q '^$(GROUP):' /etc/group || groupadd $(GROUP)) 2>/dev/null || true
@@ -129,7 +129,7 @@ install-s6: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
 	@cp -rf templates/* $(DATA_DIR)/templates/
 	@cp -rf static/* $(DATA_DIR)/static/
-	@cp -n example-config.ini $(DATA_DIR)/config.ini
+	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
 	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
 	@echo "Setting up user '$(USER)'..."
 	@(grep -q '^$(GROUP):' /etc/group || groupadd $(GROUP)) 2>/dev/null || true
@@ -150,7 +150,7 @@ install-dinit: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
 	@cp -rf templates/* $(DATA_DIR)/templates/
 	@cp -rf static/* $(DATA_DIR)/static/
-	@cp -n example-config.ini $(DATA_DIR)/config.ini
+	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
 	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
 	@echo "Setting up user '$(USER)'..."
 	@(grep -q '^$(GROUP):' /etc/group || groupadd $(GROUP)) 2>/dev/null || true
