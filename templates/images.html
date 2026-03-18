@@ -59,15 +59,48 @@
                 </div>
                 {{endfor}}
             </div>
-            <nav class="pagination">
-                <a class="pagination-btn prev" href="/images?q={{query}}&p={{prev_page}}">
-                    &larr; Page {{prev_page}}
-                </a>
-                <span class="pagination-current">Page {{page}}</span>
-                <a class="pagination-btn next" href="/images?q={{query}}&p={{next_page}}">
-                    Page {{next_page}} &rarr;
-                </a>
-            </nav>
+                <nav class="pagination">
+                    <a class="pagination-btn prev" href="/images?q={{query}}&p={{prev_page}}">
+                        &larr;
+                    </a>
+                    
+                    {{if two_prev_page != 0}}
+                    <a class="pagination-btn prev" href="/images?q={{query}}&p={{two_prev_page}}">
+                         {{two_prev_page}}
+                    </a>
+                    {{endif}}
+
+                    {{if prev_page != 0}}
+                    <a class="pagination-btn prev" href="/images?q={{query}}&p={{prev_page}}">
+                         {{prev_page}}
+                    </a>
+                    {{endif}}
+
+                    <a class="pagination-current" href="/images?q={{query}}&p={{page}}">
+                         {{page}}
+                    </a>
+                    <a class="pagination-btn next" href="/images?q={{query}}&p={{next_page}}">
+                         {{next_page}}
+                    </a>
+                    <a class="pagination-btn next" href="/images?q={{query}}&p={{two_next_page}}">
+                         {{two_next_page}}
+                    </a>
+
+                    {{if prev_page == 0}}
+                    <a class="pagination-btn prev" href="/images?q={{query}}&p=4">
+                         4
+                    </a>
+                    {{endif}}
+
+                    {{if two_prev_page == 0}}
+                    <a class="pagination-btn prev" href="/images?q={{query}}&p=5">
+                         5
+                    </a>
+                    {{endif}}
+                    <a class="pagination-btn next" href="/images?q={{query}}&p={{next_page}}">
+                          &rarr;
+                    </a>
+                </nav>
         </main>
     </body>
 

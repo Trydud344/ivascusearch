@@ -174,13 +174,18 @@ int results_handler(UrlParams *params) {
 
   context_set(&ctx, "query", raw_query);
 
-  char page_str[16], prev_str[16], next_str[16];
+  char page_str[16], prev_str[16], next_str[16], two_prev_str[16],
+      two_next_str[16];
   snprintf(page_str, sizeof(page_str), "%d", page);
   snprintf(prev_str, sizeof(prev_str), "%d", page > 1 ? page - 1 : 0);
   snprintf(next_str, sizeof(next_str), "%d", page + 1);
+  snprintf(two_prev_str, sizeof(two_prev_str), "%d", page > 2 ? page - 2 : 0);
+  snprintf(two_next_str, sizeof(two_next_str), "%d", page + 2);
   context_set(&ctx, "page", page_str);
   context_set(&ctx, "prev_page", prev_str);
   context_set(&ctx, "next_page", next_str);
+  context_set(&ctx, "two_prev_page", two_prev_str);
+  context_set(&ctx, "two_next_page", two_next_str);
 
   if (!raw_query || strlen(raw_query) == 0) {
     send_response("<h1>No query provided</h1>");
@@ -265,9 +270,12 @@ int results_handler(UrlParams *params) {
     int *results_inner_counts = (int *)malloc(sizeof(int) * total_results);
     char **seen_urls = (char **)malloc(sizeof(char *) * total_results);
     if (!results_matrix || !results_inner_counts || !seen_urls) {
-      if (results_matrix) free(results_matrix);
-      if (results_inner_counts) free(results_inner_counts);
-      if (seen_urls) free(seen_urls);
+      if (results_matrix)
+        free(results_matrix);
+      if (results_inner_counts)
+        free(results_inner_counts);
+      if (seen_urls)
+        free(seen_urls);
       char *html = render_template("results.html", &ctx);
       if (html) {
         send_response(html);

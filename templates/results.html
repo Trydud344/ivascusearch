@@ -54,11 +54,44 @@
 
                 <nav class="pagination">
                     <a class="pagination-btn prev" href="/search?q={{query}}&p={{prev_page}}">
-                        &larr; Page {{prev_page}}
+                        &larr;
                     </a>
-                    <span class="pagination-current">Page {{page}}</span>
+                    
+                    {{if two_prev_page != 0}}
+                    <a class="pagination-btn prev" href="/search?q={{query}}&p={{two_prev_page}}">
+                         {{two_prev_page}}
+                    </a>
+                    {{endif}}
+
+                    {{if prev_page != 0}}
+                    <a class="pagination-btn prev" href="/search?q={{query}}&p={{prev_page}}">
+                         {{prev_page}}
+                    </a>
+                    {{endif}}
+
+                    <a class="pagination-current" href="/search?q={{query}}&p={{page}}">
+                         {{page}}
+                    </a>
                     <a class="pagination-btn next" href="/search?q={{query}}&p={{next_page}}">
-                        Page {{next_page}} &rarr;
+                         {{next_page}}
+                    </a>
+                    <a class="pagination-btn next" href="/search?q={{query}}&p={{two_next_page}}">
+                         {{two_next_page}}
+                    </a>
+
+                    {{if prev_page == 0}}
+                    <a class="pagination-btn prev" href="/search?q={{query}}&p=4">
+                         4
+                    </a>
+                    {{endif}}
+
+                    {{if two_prev_page == 0}}
+                    <a class="pagination-btn prev" href="/search?q={{query}}&p=5">
+                         5
+                    </a>
+                    {{endif}}
+                    <a class="pagination-btn next" href="/search?q={{query}}&p={{next_page}}">
+                          &rarr;
                     </a>
                 </nav>
             </main>
