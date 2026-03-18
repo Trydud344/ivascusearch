@@ -284,7 +284,6 @@ h1 span {
 .engine-warning {
     background:var(--bg-card);
     border:1px solid var(--border);
-    border-left:4px solid var(--accent);
     border-radius:12px;
     padding:14px 16px;
 }
