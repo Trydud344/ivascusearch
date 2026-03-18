@@ -63,6 +63,9 @@ int load_config(const char *filename, Config *config) {
           config->host[sizeof(config->host) - 1] = '\0';
         } else if (strcmp(key, "port") == 0) {
           config->port = atoi(value);
+        } else if (strcmp(key, "domain") == 0) {
+          strncpy(config->domain, value, sizeof(config->domain) - 1);
+          config->domain[sizeof(config->domain) - 1] = '\0';
         }
       } else if (strcmp(section, "proxy") == 0) {
         if (strcmp(key, "proxy") == 0) {

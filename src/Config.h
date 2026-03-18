@@ -33,6 +33,7 @@
 typedef struct {
   char host[256];
   int port;
+  char domain[256];
   char proxy[256];
   char proxy_list_file[256];
   int max_proxy_retries;

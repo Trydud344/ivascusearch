@@ -15,10 +15,18 @@
 #include "Routes/Search.h"
 #include "Scraping/Scraping.h"
 
+Config global_config;
+
 int handle_opensearch(UrlParams *params) {
   (void)params;
-  serve_static_file_with_mime("opensearch.xml",
-                              "application/opensearchdescription+xml");
+  extern Config global_config;
+  TemplateContext ctx = new_context();
+  context_set(&ctx, "domain", global_config.domain);
+  char *rendered = render_template("opensearch.xml", &ctx);
+  serve_data(rendered, strlen(rendered), "application/opensearchdescription+xml");
+
+  free(rendered);
+  free_context(&ctx);
   return 0;
 }
 
@@ -35,6 +43,7 @@ int main() {
 
   Config cfg = {.host = DEFAULT_HOST,
                 .port = DEFAULT_PORT,
+                .domain = "",
                 .proxy = "",
                 .proxy_list_file = "",
                 .max_proxy_retries = DEFAULT_MAX_PROXY_RETRIES,
@@ -47,6 +56,8 @@ int main() {
   if (load_config("config.ini", &cfg) != 0) {
     fprintf(stderr, "[WARN] Could not load config file, using defaults\n");
   }
+
+  global_config = cfg;
 
   if (cache_init(cfg.cache_dir) != 0) {
     fprintf(stderr,
