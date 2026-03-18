@@ -151,7 +151,7 @@ install-openrc: $(TARGET)
 	@echo "Run 'rc-update add omnisearch default' to enable"
 
 install-runit: $(TARGET)
-	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
+	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR) /etc/service/omnisearch/log/
 	@cp -rf templates/* $(DATA_DIR)/templates/
 	@cp -rf static/* $(DATA_DIR)/static/
 	@cp -n example-config.ini $(DATA_DIR)/config.ini || true
@@ -161,15 +161,15 @@ install-runit: $(TARGET)
 	@id -u $(USER) >/dev/null 2>&1 || useradd --system --home $(DATA_DIR) --shell /usr/sbin/nologin -g $(GROUP) $(USER)
 	@chown -R $(USER):$(GROUP) $(LOG_DIR) $(CACHE_DIR) $(VAR_DIR) $(DATA_DIR) 2>/dev/null || true
 	@chown $(USER):$(GROUP) $(DATA_DIR)/config.ini 2>/dev/null || true
-	@mkdir -p /etc/service/omnisearch/log/supervise/control
 	install -m 755 init/runit/run /etc/service/omnisearch/run
 	install -m 755 init/runit/log/run /etc/service/omnisearch/log/run
-	install -m 755 init/runit/log/run /etc/service/omnisearch/log/supervise/control
 	@echo ""
 	@echo "Config: $(DATA_DIR)/config.ini"
 	@echo "Edit config with: nano $(DATA_DIR)/config.ini"
 	@echo "Installed runit service to /etc/service/omnisearch"
-	@echo "Service will start automatically"
+	@echo "You need to start the service manually"
+	@echo "Void: ln -s /etc/service/omnisearch/ /var/service"
+	@echo "Artix: Idk I don't use artix -crumpet"
 
 install-s6: $(TARGET)
 	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)

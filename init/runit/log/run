@@ -1,2 +1,3 @@
-#!/bin/sh
-exec chpst -u omnisearch:omnisearch svlogd -tt /var/log/omnisearch
+#!/bin/sh -e
+exec 2>&1
+exec chpst -u omnisearch:omnisearch svlogd -ttt /var/log/omnisearch/
