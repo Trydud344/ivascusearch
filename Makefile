@@ -56,6 +56,7 @@ GROUP       := omnisearch
 
 SYSTEMD_DIR := /etc/systemd/system
 OPENRC_DIR  := /etc/init.d
+DINIT_DIR   := /etc/dinit.d
 
 install:
 	@echo "Available install targets:"
@@ -63,6 +64,7 @@ install:
 	@echo "  make install-openrc"
 	@echo "  make install-runit"
 	@echo "  make install-s6"
+	@echo "  make install-dinit"
 	@echo ""
 	@echo "Example: doas/sudo make install-openrc"
 
@@ -144,15 +146,34 @@ install-s6: $(TARGET)
 	@echo "Installed s6 service to /var/service/omnisearch"
 	@echo "Service will start automatically"
 
+install-dinit: $(TARGET)
+	@mkdir -p $(DATA_DIR)/templates $(DATA_DIR)/static $(LOG_DIR) $(CACHE_DIR)
+	@cp -rf templates/* $(DATA_DIR)/templates/
+	@cp -rf static/* $(DATA_DIR)/static/
+	@cp -n example-config.ini $(DATA_DIR)/config.ini
+	install -m 755 $(TARGET) $(INSTALL_BIN_DIR)/omnisearch
+	@echo "Setting up user '$(USER)'..."
+	@(grep -q '^$(GROUP):' /etc/group || groupadd $(GROUP)) 2>/dev/null || true
+	@id -u $(USER) >/dev/null 2>&1 || useradd --system --home $(DATA_DIR) --shell /usr/sbin/nologin -g $(GROUP) $(USER)
+	@chown -R $(USER):$(GROUP) $(LOG_DIR) $(CACHE_DIR) $(VAR_DIR) $(DATA_DIR) 2>/dev/null || true
+	@chown $(USER):$(GROUP) $(DATA_DIR)/config.ini 2>/dev/null || true
+	install -m 644 init/dinit/omnisearch $(DINIT_DIR)/omnisearch
+	@echo ""
+	@echo "Config: $(DATA_DIR)/config.ini"
+	@echo "Edit config with: nano $(DATA_DIR)/config.ini"
+	@echo "Installed dinit service to $(DINIT_DIR)/omnisearch"
+	@echo "Run 'dinitctl enable omnisearch' to start"
+
 uninstall:
 	rm -f $(INSTALL_BIN_DIR)/omnisearch
 	rm -rf $(DATA_DIR)
 	rm -f $(SYSTEMD_DIR)/omnisearch.service
 	rm -f $(OPENRC_DIR)/omnisearch
+	rm -f $(DINIT_DIR)/omnisearch
 	rm -rf /etc/service/omnisearch
 	rm -rf /var/service/omnisearch
 	@id -u $(USER) >/dev/null 2>&1 && userdel $(USER) 2>/dev/null || true
 	@grep -q '^$(GROUP):' /etc/group 2>/dev/null && groupdel $(GROUP) 2>/dev/null || true
 	@echo "Uninstalled omnisearch"
 
-.PHONY: all run clean rebuild info install install-systemd install-openrc install-runit install-s6 uninstall
+.PHONY: all run clean rebuild info install install-systemd install-openrc install-runit install-s6 install-dinit uninstall

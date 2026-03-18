@@ -60,7 +60,7 @@ $ cd omnisearch
 $ make
 # make install-<init>
 ```
-Replace `<init>` with your init system (openrc,systemd,runit,s6)
+Replace `<init>` with your init system (openrc,systemd,runit,s6,dinit)
 
 ## Hosting
 Run it normally behind a reverse proxy (like nginx)
