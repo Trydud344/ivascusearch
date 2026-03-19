@@ -38,8 +38,9 @@ Depending on your system, you may first need to install libcurl and libxml2.
 
 ### Alpine
 ```
-# apk add libxml2-dev curl-dev
+# apk add libxml2-dev curl-dev shadow
 ```
+On Alpine, `shadow` is needed for the user creation process during the install.
 
 ### Void
 ```
