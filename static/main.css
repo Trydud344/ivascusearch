@@ -301,7 +301,7 @@ h1 span {
 .result {
     margin-bottom:32px;
 }
-.result a {
+.result > a {
     color:var(--accent);
     text-decoration:none;
     font-size:1.25rem;
@@ -318,6 +318,12 @@ h1 span {
     color:var(--text-muted);
     line-height:1.6;
     margin:0;
+}
+.cached {
+    color: var(--text-secondary);
+    font-size:0.85rem;
+    display:inline-block;
+    text-decoration:none;
 }
 .infobox {
     grid-column:3;
@@ -480,7 +486,7 @@ h1 span {
     .engine-warning {
         padding:12px 14px;
     }
-    .result a {
+    .result > a {
         font-size:1.1rem;
         word-break:break-word;
     }
@@ -490,6 +496,9 @@ h1 span {
     }
     .desc {
         font-size:0.9rem;
+    }
+    .cached {
+        font-size:0.8rem;
     }
     .infobox {
         margin-bottom:16px;
