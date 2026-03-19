@@ -199,6 +199,13 @@ int setup_job(ScrapeJob *job, CURLM *multi_handle) {
     return -1;
   }
 
+  for (char *p = encoded_query + strlen(encoded_query) - 3; p >= encoded_query; p--) {
+    if (p[0] == '%' && p[1] == '2' && p[2] == '0') {
+      *p = '+';
+      memmove(p + 1, p + 3, strlen(p + 3) + 1);
+    }
+  }
+
   char *full_url =
       build_search_url(job->engine->base_url, job->engine->page_param,
                        job->engine->page_multiplier, job->engine->page_base,
