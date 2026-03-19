@@ -220,6 +220,7 @@ int results_handler(UrlParams *params) {
   TemplateContext ctx = new_context();
   char *raw_query = "";
   int page = 1;
+  int btnI = 0;
 
   if (params) {
     for (int i = 0; i < params->count; i++) {
@@ -229,6 +230,8 @@ int results_handler(UrlParams *params) {
         int parsed = atoi(params->params[i].value);
         if (parsed > 1)
           page = parsed;
+      } else if (strcmp(params->params[i].key, "btnI") == 0) {
+        btnI = atoi(params->params[i].value);
       }
     }
   }
@@ -297,6 +300,48 @@ int results_handler(UrlParams *params) {
     }
   }
 
+  if (btnI) {
+    for (int i = 0; i < ENGINE_COUNT; i++) {
+      if (jobs[i].results_count > 0 && all_results[i][0].url) {
+        char *redirect_url = strdup(all_results[i][0].url);
+        for (int j = 0; j < ENGINE_COUNT; j++) {
+          for (int k = 0; k < jobs[j].results_count; k++) {
+            free(all_results[j][k].url);
+            free(all_results[j][k].title);
+            free(all_results[j][k].snippet);
+          }
+          free(all_results[j]);
+        }
+        if (page == 1) {
+          for (int j = 0; j < HANDLER_COUNT; j++) {
+            if (infobox_data[j].success) {
+              free_infobox(&infobox_data[j].result);
+            }
+          }
+        }
+        free_context(&ctx);
+        if (redirect_url) {
+          send_redirect(redirect_url);
+          free(redirect_url);
+        }
+        return 0;
+      }
+    }
+    for (int i = 0; i < ENGINE_COUNT; i++) {
+      free(all_results[i]);
+    }
+    if (page == 1) {
+      for (int i = 0; i < HANDLER_COUNT; i++) {
+        if (infobox_data[i].success) {
+          free_infobox(&infobox_data[i].result);
+        }
+      }
+    }
+    free_context(&ctx);
+    send_response("<h1>No results found</h1>");
+    return 0;
+  }
+  
   char ***infobox_matrix = NULL;
   int *infobox_inner_counts = NULL;
   int infobox_count = 0;
