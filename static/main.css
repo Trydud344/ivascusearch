@@ -323,7 +323,7 @@ h1 span {
     color: var(--text-secondary);
     font-size:0.85rem;
     display:inline-block;
-    text-decoration:none;
+    text-decoration: underline;
 }
 .infobox {
     grid-column:3;
