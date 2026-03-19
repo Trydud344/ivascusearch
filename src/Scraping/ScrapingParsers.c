@@ -240,6 +240,76 @@ static int parse_yahoo(const char *engine_name, xmlDocPtr doc,
   return found_count;
 }
 
+static int parse_mojeek(const char *engine_name, xmlDocPtr doc,
+                        SearchResult **out_results, int max_results) {
+  (void)engine_name;
+  int found_count = 0;
+
+  xmlXPathContextPtr ctx = create_xpath_context(doc);
+  if (!ctx)
+    return 0;
+
+  xmlXPathObjectPtr obj =
+      xml_xpath_eval(ctx, "//ul[@class='results-standard']/li[starts-with(@class, 'r')]");
+
+  if (!obj || !obj->nodesetval || obj->nodesetval->nodeNr == 0) {
+    free_xpath_objects(ctx, obj);
+    return 0;
+  }
+
+  int num_results = obj->nodesetval->nodeNr;
+  *out_results = alloc_results_array(num_results, max_results);
+  if (!*out_results) {
+    free_xpath_objects(ctx, obj);
+    return 0;
+  }
+
+  for (int i = 0; i < num_results && found_count < max_results; i++) {
+    xmlNodePtr result_node = obj->nodesetval->nodeTab[i];
+    ctx->node = result_node;
+
+    xmlXPathObjectPtr link_obj =
+        xml_xpath_eval(ctx, ".//a[@class='title']");
+    char *url =
+        (link_obj && link_obj->nodesetval && link_obj->nodesetval->nodeNr > 0)
+            ? (char *)xmlGetProp(link_obj->nodesetval->nodeTab[0],
+                                 (xmlChar *)"href")
+            : NULL;
+
+    char *title = (link_obj && link_obj->nodesetval &&
+                   link_obj->nodesetval->nodeNr > 0)
+                      ? xml_node_content(link_obj->nodesetval->nodeTab[0])
+                      : NULL;
+
+    xmlXPathObjectPtr snippet_obj = xml_xpath_eval(ctx, ".//p[@class='s']");
+    char *snippet_text =
+        (snippet_obj && snippet_obj->nodesetval &&
+         snippet_obj->nodesetval->nodeNr > 0)
+            ? xml_node_content(snippet_obj->nodesetval->nodeTab[0])
+            : NULL;
+
+    if (url && title) {
+      assign_result(&(*out_results)[found_count], url, title, snippet_text, 0);
+      found_count++;
+    }
+
+    free_xml_node_list(title, url, snippet_text);
+    if (link_obj)
+      xmlXPathFreeObject(link_obj);
+    if (snippet_obj)
+      xmlXPathFreeObject(snippet_obj);
+  }
+
+  ctx->node = NULL;
+  free_xpath_objects(ctx, obj);
+  return found_count;
+}
+
+static int parse_yahoo(const char *engine_name, xmlDocPtr doc,
+                       SearchResult **out_results, int max_results);
+static int parse_mojeek(const char *engine_name, xmlDocPtr doc,
+                        SearchResult **out_results, int max_results);
+
 const SearchEngine ENGINE_REGISTRY[] = {
     {.name = "DuckDuckGo Lite",
      .base_url = "https://lite.duckduckgo.com/lite/?q=",
@@ -264,6 +334,14 @@ const SearchEngine ENGINE_REGISTRY[] = {
      .page_param = "b",
      .page_multiplier = 10,
      .page_base = 1,
-     .parser = parse_yahoo}};
+     .parser = parse_yahoo},
+    {.name = "Mojeek",
+     .base_url = "https://www.mojeek.com/search?q=",
+     .host_header = "www.mojeek.com",
+     .referer = "https://www.mojeek.com/",
+     .page_param = "s",
+     .page_multiplier = 10,
+     .page_base = 1,
+     .parser = parse_mojeek}};
 
 const int ENGINE_COUNT = sizeof(ENGINE_REGISTRY) / sizeof(SearchEngine);
