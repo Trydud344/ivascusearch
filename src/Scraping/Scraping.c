@@ -49,6 +49,11 @@ static int response_looks_like_results_page(const ScrapeJob *job,
            response_contains(response, "compText");
   }
 
+  if (strcmp(job->engine->name, "Mojeek") == 0) {
+    return response_contains(response, "class=\"results-standard\"") ||
+           response_contains(response, "Mojeek Search");
+  }
+
   return 0;
 }
 
