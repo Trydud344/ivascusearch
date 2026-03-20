@@ -47,32 +47,6 @@ On Alpine, `shadow` is needed for the user creation process during the install.
 # xbps-install -S libxml2-devel libcurl-devel
 ```
 
-### NixOS
-Add the flake to your inputs and import the module. That is all you need.
-Here's an example of using the modules in a flake:
-```
-# flake.nix
-{
-  inputs = { 
-    omnisearch = {
-      url = "git+https://git.bwaaa.monster/omnisearch";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
-
-  outputs = { self, nixpkgs, omnisearch, ... }: {
-    nixosConfigurations.mySystem = nixpkgs.lib.nixosSystem {
-      modules = [
-        omnisearch.nixosModules.default
-        {
-          services.omnisearch.enable = true;
-        }
-      ];
-    };
-  };
-}
-```
-
 ### macOS (Homebrew)
 ```
 $ brew install libxml2 curl openssl pkg-config
