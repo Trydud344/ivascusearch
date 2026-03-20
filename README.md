@@ -18,7 +18,7 @@ Depending on your system, you may first need to install libcurl and libxml2.
 
 ### Arch Linux
 ```
-# pacman -S libxml2 libcurl
+# pacman -S libxml2 curl
 ```
 
 ### Debian/Ubuntu
