@@ -1,0 +1,46 @@
+{
+  "nodes": {
+    "beaker-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773884524,
+        "narHash": "sha256-1dnlofWaxI/YRID+WPz2jHZNDyloBubDt/bAQk9ePLU=",
+        "ref": "refs/heads/master",
+        "rev": "abc598baf15d6f8a4de395a27ba34b1e769558e1",
+        "revCount": 21,
+        "shallow": false,
+        "type": "git",
+        "url": "https://git.bwaaa.monster/beaker"
+      },
+      "original": {
+        "shallow": false,
+        "type": "git",
+        "url": "https://git.bwaaa.monster/beaker"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1773734432,
+        "narHash": "sha256-IF5ppUWh6gHGHYDbtVUyhwy/i7D261P7fWD1bPefOsw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "cda48547b432e8d3b18b4180ba07473762ec8558",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "beaker-src": "beaker-src",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
