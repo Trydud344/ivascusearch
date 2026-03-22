@@ -273,26 +273,39 @@ int results_handler(UrlParams *params) {
     }
   }
 
+  int enabled_engine_count = 0;
+  for (int i = 0; i < ENGINE_COUNT; i++) {
+    if (ENGINE_REGISTRY[i].enabled) {
+      enabled_engine_count++;
+    }
+  }
+
   ScrapeJob jobs[ENGINE_COUNT];
   SearchResult *all_results[ENGINE_COUNT];
 
+  int engine_idx = 0;
   for (int i = 0; i < ENGINE_COUNT; i++) {
-    all_results[i] = NULL;
-    jobs[i].engine = &ENGINE_REGISTRY[i];
-    jobs[i].query = raw_query;
-    jobs[i].out_results = &all_results[i];
-    jobs[i].max_results = MAX_RESULTS_PER_ENGINE;
-    jobs[i].results_count = 0;
-    jobs[i].page = page;
-    jobs[i].handle = NULL;
-    jobs[i].response.memory = NULL;
-    jobs[i].response.size = 0;
-    jobs[i].response.capacity = 0;
-    jobs[i].http_status = 0;
-    jobs[i].status = SCRAPE_STATUS_PENDING;
+    if (ENGINE_REGISTRY[i].enabled) {
+      all_results[engine_idx] = NULL;
+      jobs[engine_idx].engine = &ENGINE_REGISTRY[i];
+      jobs[engine_idx].query = raw_query;
+      jobs[engine_idx].out_results = &all_results[engine_idx];
+      jobs[engine_idx].max_results = MAX_RESULTS_PER_ENGINE;
+      jobs[engine_idx].results_count = 0;
+      jobs[engine_idx].page = page;
+      jobs[engine_idx].handle = NULL;
+      jobs[engine_idx].response.memory = NULL;
+      jobs[engine_idx].response.size = 0;
+      jobs[engine_idx].response.capacity = 0;
+      jobs[engine_idx].http_status = 0;
+      jobs[engine_idx].status = SCRAPE_STATUS_PENDING;
+      engine_idx++;
+    }
   }
 
-  scrape_engines_parallel(jobs, ENGINE_COUNT);
+  if (enabled_engine_count > 0) {
+    scrape_engines_parallel(jobs, enabled_engine_count);
+  }
 
   if (page == 1) {
     for (int i = 0; i < HANDLER_COUNT; i++) {
@@ -301,10 +314,10 @@ int results_handler(UrlParams *params) {
   }
 
   if (btnI) {
-    for (int i = 0; i < ENGINE_COUNT; i++) {
+    for (int i = 0; i < enabled_engine_count; i++) {
       if (jobs[i].results_count > 0 && all_results[i][0].url) {
         char *redirect_url = strdup(all_results[i][0].url);
-        for (int j = 0; j < ENGINE_COUNT; j++) {
+        for (int j = 0; j < enabled_engine_count; j++) {
           for (int k = 0; k < jobs[j].results_count; k++) {
             free(all_results[j][k].url);
             free(all_results[j][k].title);
@@ -327,7 +340,7 @@ int results_handler(UrlParams *params) {
         return 0;
       }
     }
-    for (int i = 0; i < ENGINE_COUNT; i++) {
+    for (int i = 0; i < enabled_engine_count; i++) {
       free(all_results[i]);
     }
     if (page == 1) {
@@ -369,7 +382,7 @@ int results_handler(UrlParams *params) {
   }
 
   int warning_count = 0;
-  for (int i = 0; i < ENGINE_COUNT; i++) {
+  for (int i = 0; i < enabled_engine_count; i++) {
     if (warning_message_for_job(&jobs[i]))
       warning_count++;
   }
@@ -379,7 +392,7 @@ int results_handler(UrlParams *params) {
     int *warning_inner_counts = NULL;
     int warning_index = 0;
 
-    for (int i = 0; i < ENGINE_COUNT; i++) {
+    for (int i = 0; i < enabled_engine_count; i++) {
       const char *warning_message = warning_message_for_job(&jobs[i]);
       if (!warning_message)
         continue;
@@ -407,7 +420,7 @@ int results_handler(UrlParams *params) {
   }
 
   int total_results = 0;
-  for (int i = 0; i < ENGINE_COUNT; i++) {
+  for (int i = 0; i < enabled_engine_count; i++) {
     total_results += jobs[i].results_count;
   }
 
@@ -427,7 +440,7 @@ int results_handler(UrlParams *params) {
         send_response(html);
         free(html);
       }
-      for (int i = 0; i < ENGINE_COUNT; i++)
+      for (int i = 0; i < enabled_engine_count; i++)
         free(all_results[i]);
       if (page == 1) {
         for (int i = 0; i < HANDLER_COUNT; i++) {
@@ -441,7 +454,7 @@ int results_handler(UrlParams *params) {
     }
     int unique_count = 0;
 
-    for (int i = 0; i < ENGINE_COUNT; i++) {
+    for (int i = 0; i < enabled_engine_count; i++) {
       for (int j = 0; j < jobs[i].results_count; j++) {
         char *display_url = all_results[i][j].url;
 
@@ -524,7 +537,7 @@ int results_handler(UrlParams *params) {
       free(html);
     }
 
-    for (int i = 0; i < ENGINE_COUNT; i++) {
+    for (int i = 0; i < enabled_engine_count; i++) {
       free(all_results[i]);
     }
   }

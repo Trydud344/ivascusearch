@@ -15,6 +15,7 @@ typedef int (*ParserFunc)(const char *engine_name, xmlDocPtr doc,
                           SearchResult **out_results, int max_results);
 
 typedef struct {
+  const char *id;
   const char *name;
   const char *base_url;
   const char *host_header;
@@ -24,6 +25,7 @@ typedef struct {
   int page_multiplier;
   int page_base;
   ParserFunc parser;
+  int enabled;
 } SearchEngine;
 
 typedef struct {
@@ -54,8 +56,9 @@ typedef struct {
   ScrapeStatus status;
 } ScrapeJob;
 
-extern const SearchEngine ENGINE_REGISTRY[];
+extern SearchEngine ENGINE_REGISTRY[];
 extern const int ENGINE_COUNT;
+void apply_engines_config(const char *engines_str);
 
 size_t write_memory_callback(void *contents, size_t size, size_t nmemb,
                              void *userp);

@@ -310,38 +310,122 @@ static int parse_yahoo(const char *engine_name, xmlDocPtr doc,
 static int parse_mojeek(const char *engine_name, xmlDocPtr doc,
                         SearchResult **out_results, int max_results);
 
-const SearchEngine ENGINE_REGISTRY[] = {
-    {.name = "DuckDuckGo Lite",
+SearchEngine ENGINE_REGISTRY[] = {
+    {.id = "ddg",
+     .name = "DuckDuckGo Lite",
      .base_url = "https://lite.duckduckgo.com/lite/?q=",
      .host_header = "lite.duckduckgo.com",
      .referer = "https://lite.duckduckgo.com/",
      .page_param = "s",
      .page_multiplier = 30,
      .page_base = 0,
-     .parser = parse_ddg_lite},
-    {.name = "Startpage",
+     .parser = parse_ddg_lite,
+     .enabled = 1},
+    {.id = "startpage",
+     .name = "Startpage",
      .base_url = "https://www.startpage.com/sp/search?q=",
      .host_header = "www.startpage.com",
      .referer = "https://www.startpage.com/",
      .page_param = "page",
      .page_multiplier = 1,
      .page_base = 1,
-     .parser = parse_startpage},
-    {.name = "Yahoo",
+     .parser = parse_startpage,
+     .enabled = 1},
+    {.id = "yahoo",
+     .name = "Yahoo",
      .base_url = "https://search.yahoo.com/search?p=",
      .host_header = "search.yahoo.com",
      .referer = "https://search.yahoo.com/",
      .page_param = "b",
      .page_multiplier = 10,
      .page_base = 1,
-     .parser = parse_yahoo},
-    {.name = "Mojeek",
+     .parser = parse_yahoo,
+     .enabled = 1},
+    {.id = "mojeek",
+     .name = "Mojeek",
      .base_url = "https://www.mojeek.com/search?q=",
      .host_header = "www.mojeek.com",
      .referer = "https://www.mojeek.com/",
      .page_param = "s",
      .page_multiplier = 10,
      .page_base = 1,
-     .parser = parse_mojeek}};
+     .parser = parse_mojeek,
+     .enabled = 1}};
 
 const int ENGINE_COUNT = sizeof(ENGINE_REGISTRY) / sizeof(SearchEngine);
+
+static int engine_id_compare(const char *engine_id, const char *config_id) {
+  while (*engine_id && *config_id) {
+    char e = *engine_id;
+    char c = *config_id;
+    if (e >= 'A' && e <= 'Z')
+      e = e - 'A' + 'a';
+    if (c >= 'A' && c <= 'Z')
+      c = c - 'A' + 'a';
+    if (e != c)
+      return 0;
+    engine_id++;
+    config_id++;
+  }
+  return *engine_id == *config_id;
+}
+
+void apply_engines_config(const char *engines_str) {
+  if (!engines_str || engines_str[0] == '\0') {
+    for (int i = 0; i < ENGINE_COUNT; i++) {
+      ENGINE_REGISTRY[i].enabled = 1;
+    }
+    return;
+  }
+
+  for (int i = 0; i < ENGINE_COUNT; i++) {
+    ENGINE_REGISTRY[i].enabled = 0;
+  }
+
+  char *copy = strdup(engines_str);
+  if (!copy)
+    return;
+
+  char *saveptr;
+  char *token = strtok_r(copy, ",", &saveptr);
+
+  while (token) {
+    while (*token == ' ' || *token == '\t')
+      token++;
+
+    if (strcmp(token, "*") == 0) {
+      for (int i = 0; i < ENGINE_COUNT; i++) {
+        ENGINE_REGISTRY[i].enabled = 1;
+      }
+    } else if (token[0] == '-' && token[1] != '\0') {
+      char *engine_id = token + 1;
+      int found = 0;
+      for (int i = 0; i < ENGINE_COUNT; i++) {
+        if (engine_id_compare(ENGINE_REGISTRY[i].id, engine_id)) {
+          ENGINE_REGISTRY[i].enabled = 0;
+          found = 1;
+          break;
+        }
+      }
+      if (!found) {
+        fprintf(stderr, "[WARN] Unknown engine: %s\n", engine_id);
+      }
+    } else {
+      int found = 0;
+      for (int i = 0; i < ENGINE_COUNT; i++) {
+        if (engine_id_compare(ENGINE_REGISTRY[i].id, token)) {
+          ENGINE_REGISTRY[i].enabled = 1;
+          found = 1;
+          break;
+        }
+      }
+      if (!found) {
+        fprintf(stderr, "[WARN] Unknown engine: %s\n", token);
+      }
+    }
+
+    token = strtok_r(NULL, ",", &saveptr);
+  }
+
+  free(copy);
+}

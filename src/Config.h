@@ -42,6 +42,7 @@ typedef struct {
   char cache_dir[512];
   int cache_ttl_search;
   int cache_ttl_infobox;
+  char engines[512];
 } Config;
 
 int load_config(const char *filename, Config *config);

@@ -16,7 +16,7 @@
 #include "Scraping/Scraping.h"
 
 Config global_config;
-
+ 
 int handle_opensearch(UrlParams *params) {
   (void)params;
   extern Config global_config;
@@ -51,13 +51,16 @@ int main() {
                 .randomize_password = 0,
                 .cache_dir = DEFAULT_CACHE_DIR,
                 .cache_ttl_search = DEFAULT_CACHE_TTL_SEARCH,
-                .cache_ttl_infobox = DEFAULT_CACHE_TTL_INFOBOX};
+                .cache_ttl_infobox = DEFAULT_CACHE_TTL_INFOBOX,
+                .engines = ""};
 
   if (load_config("config.ini", &cfg) != 0) {
     fprintf(stderr, "[WARN] Could not load config file, using defaults\n");
   }
 
   global_config = cfg;
+
+  apply_engines_config(cfg.engines);
 
   if (cache_init(cfg.cache_dir) != 0) {
     fprintf(stderr,

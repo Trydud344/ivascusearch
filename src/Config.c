@@ -54,6 +54,8 @@ int load_config(const char *filename, Config *config) {
         value_end--;
       }
 
+      while (*value == ' ' || *value == '\t')
+        value++;
       while (*value == '"' || *value == '\'')
         value++;
 
@@ -90,6 +92,11 @@ int load_config(const char *filename, Config *config) {
           config->cache_ttl_search = atoi(value);
         } else if (strcmp(key, "ttl_infobox") == 0) {
           config->cache_ttl_infobox = atoi(value);
+        }
+      } else if (strcmp(section, "engines") == 0) {
+        if (strcmp(key, "engines") == 0) {
+          strncpy(config->engines, value, sizeof(config->engines) - 1);
+          config->engines[sizeof(config->engines) - 1] = '\0';
         }
       }
     }
