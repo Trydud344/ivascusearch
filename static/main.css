@@ -70,9 +70,14 @@ img[src=""] {
     z-index: 1;
 }
 
-.view-home .hero-logo a, header h1 a {
-    color: inherit;
+.view-home .hero-logo a, header h1 a, 
+.view-home .hero-logo a:visited, header h1 a:visited,
+.view-home .hero-logo a:hover, header h1 a:hover {
+    color: var(--text-primary);
     text-decoration: none;
+}
+.view-home .hero-logo a span, header h1 a span {
+    color: var(--accent);
 }
 .view-home .hero-logo {
     font-size:4.5rem;
