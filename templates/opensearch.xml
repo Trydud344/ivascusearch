@@ -2,7 +2,7 @@
 <OpenSearchDescription
 	xmlns="http://a9.com/-/spec/opensearch/1.1/"
 	xmlns:moz="http://www.mozilla.org/2006/browser/search/">
-	<ShortName>OmniSearch</ShortName>
+	<ShortName>IvascuSearch</ShortName>
 	<Description>Lightweight metasearch engine</Description>
 	<Url type="text/html" method="get" template="{{domain}}/search?q={searchTerms}"/>
 	<InputEncoding>UTF-8</InputEncoding>
