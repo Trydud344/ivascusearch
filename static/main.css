@@ -73,11 +73,11 @@ img[src=""] {
 .view-home .hero-logo a, header h1 a, 
 .view-home .hero-logo a:visited, header h1 a:visited,
 .view-home .hero-logo a:hover, header h1 a:hover {
-    color: var(--text-primary);
+    color: white;
     text-decoration: none;
 }
 .view-home .hero-logo a span, header h1 a span {
-    color: var(--accent);
+    color: yellow;
 }
 .view-home .hero-logo {
     font-size:4.5rem;
