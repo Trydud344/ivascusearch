@@ -17,7 +17,7 @@
   var waveColor = [0.843, 0.600, 0.129]; // Gruvbox yellow1 #d79921
   var colorNum = 4.0;
   var pixelSize = 2.0;
-  var enableMouseInteraction = 1;
+  var enableMouseInteraction = 0;
   var mouseRadius = 0.3;
 
   // --- Shaders ---
@@ -222,13 +222,8 @@
   gl.uniform1f(uColorNum, colorNum);
   gl.uniform1f(uPixelSize, pixelSize);
 
-  // --- Mouse tracking (listen on document so content doesn't block it) ---
+  // --- Mouse tracking disabled ---
   var mouseX = 0, mouseY = 0;
-  document.addEventListener('mousemove', function (e) {
-    var rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
-  });
 
   // --- Resize (render at 1x DPI for the retro pixelated look) ---
   function resize() {
