@@ -13,6 +13,7 @@
 #include "Routes/ImageProxy.h"
 #include "Routes/Images.h"
 #include "Routes/Search.h"
+#include "Routes/AiOverview.h"
 #include "Scraping/Scraping.h"
 
 Config global_config;
@@ -95,6 +96,7 @@ int main() {
   set_handler("/search", results_handler);
   set_handler("/images", images_handler);
   set_handler("/proxy", image_proxy_handler);
+  set_handler("/ai_overview", handle_ai_overview);
 
   fprintf(stderr, "[INFO] Starting Omnisearch on %s:%d\n", cfg.host, cfg.port);
 

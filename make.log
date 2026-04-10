@@ -1,0 +1,13 @@
+cc -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2 -c src/Cache/Cache.c -o obj/Cache/Cache.o
+Compiled: src/Cache/Cache.c
+cc -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2 -c src/Config.c -o obj/Config.o
+Compiled: src/Config.c
+cc -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2 -c src/Infobox/Calculator.c -o obj/Infobox/Calculator.o
+Compiled: src/Infobox/Calculator.c
+cc -Wall -Wextra -O2 -Isrc -I/usr/include/libxml2 -c src/Infobox/CurrencyConversion.c -o obj/Infobox/CurrencyConversion.o
+In file included from src/Infobox/CurrencyConversion.c:3:
+src/Infobox/../Utility/HttpClient.h:4:10: fatal error: curl/curl.h: No such file or directory
+    4 | #include <curl/curl.h>
+      |          ^~~~~~~~~~~~~
+compilation terminated.
+make: *** [Makefile:36: obj/Infobox/CurrencyConversion.o] Error 1

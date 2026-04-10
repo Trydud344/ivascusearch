@@ -26,6 +26,7 @@
         </header>
         <nav class="nav-tabs">
             <div class="nav-container">
+                <a href="javascript:void(0)" id="generate-ai-btn">AI Resume</a>
                 <a href="/search?q={{query}}" class="active">
                     All
                 </a>
@@ -38,20 +39,14 @@
             <aside class="sidebar-spacer">
             </aside>
             <main class="results-container">
-                {{if exists engine_warnings}}
-                <section class="engine-warning-list">
-                    {{for warning in engine_warnings}}
-                    <article class="engine-warning">
-                        <strong class="engine-warning-title">
-                            {{warning[0]}}
-                        </strong>
-                        <p class="engine-warning-copy">
-                            {{warning[1]}}
-                        </p>
-                    </article>
-                    {{endfor}}
-                </section>
-                {{endif}}
+                <div id="ai-overview-container" style="display: none;">
+                    <div id="ai-overview-header">
+                        <h2>{{ai_name}}</h2>
+                    </div>
+                    <div id="ai-overview-content">
+                        <span class="ai-loading">Generating overview...</span>
+                    </div>
+                </div>
 
                 {{for result in results}}
                 <div class="result">
@@ -112,6 +107,21 @@
                           &rarr;
                     </a>
                 </nav>
+
+                {{if exists engine_warnings}}
+                <section class="engine-warning-list">
+                    {{for warning in engine_warnings}}
+                    <article class="engine-warning">
+                        <strong class="engine-warning-title">
+                            {{warning[0]}}
+                        </strong>
+                        <p class="engine-warning-copy">
+                            {{warning[1]}}
+                        </p>
+                    </article>
+                    {{endfor}}
+                </section>
+                {{endif}}
             </main>
             <aside class="infobox-sidebar">
             {{if exists infoboxes}}
@@ -137,6 +147,61 @@
                {{endif}}
             </aside>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const aiBtn = document.getElementById('generate-ai-btn');
+                const aiContainer = document.getElementById('ai-overview-container');
+                const aiContent = document.getElementById('ai-overview-content');
+                
+                if (aiBtn && aiContainer && aiContent) {
+                    aiBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        aiContainer.style.display = 'block';
+                        aiContent.innerHTML = '<span class="ai-loading">Generating overview...</span>';
+                        
+                        const query = new URLSearchParams(window.location.search).get('q');
+                        if (query) {
+                            fetch('/ai_overview?q=' + encodeURIComponent(query))
+                                .then(response => response.text())
+                                .then(text => {
+                                    if (text && text.trim().length > 0 && !text.includes('not configured')) {
+                                        aiContent.innerHTML = '';
+                                        const container = document.createElement('div');
+                                        aiContent.appendChild(container);
+                                        
+                                        let currentText = "";
+                                        let i = 0;
+                                        
+                                        function appendNext() {
+                                            if (i < text.length) {
+                                                currentText += text.charAt(i);
+                                                
+                                                let displayHtml = currentText
+                                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                                    .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>')
+                                                    .replace(/`(.*?)`/g, '<code>$1</code>')
+                                                    .replace(/\n\n/g, '</p><p>')
+                                                    .replace(/\n/g, '<br>');
+                                                    
+                                                container.innerHTML = '<p>' + displayHtml + '</p>';
+                                                i++;
+                                                setTimeout(appendNext, 10 + Math.random() * 20); 
+                                            }
+                                        }
+                                        appendNext();
+                                    } else {
+                                        aiContent.innerHTML = '<p>Failed to generate overview or AI is not configured.</p>';
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    aiContent.innerHTML = '<p>Failed to retrieve AI overview due to an error.</p>';
+                                });
+                        }
+                    });
+                }
+            });
+        </script>
     </body>
-
 </html>

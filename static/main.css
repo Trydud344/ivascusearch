@@ -625,3 +625,57 @@ h1 span {
         font-size:0.75rem;
     }
 }
+
+#ai-overview-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+#ai-overview-header {
+    background: rgba(215, 153, 33, 0.1);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+}
+
+#ai-overview-header h2 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#ai-overview-header span {
+    animation: pulse 2s infinite;
+}
+
+#ai-overview-content {
+    padding: 20px;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+#ai-overview-content p {
+    margin-top: 0;
+}
+
+#ai-overview-content p:last-child {
+    margin-bottom: 0;
+}
+
+.ai-loading {
+    color: var(--text-muted);
+    font-style: italic;
+    animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+

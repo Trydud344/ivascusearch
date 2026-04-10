@@ -238,6 +238,9 @@ int results_handler(UrlParams *params) {
 
   context_set(&ctx, "query", raw_query);
 
+  const char *ai_name = getenv("OPENAI_NAME");
+  context_set(&ctx, "ai_name", ai_name ? ai_name : "AI Overview");
+
   char page_str[16], prev_str[16], next_str[16], two_prev_str[16],
       two_next_str[16];
   snprintf(page_str, sizeof(page_str), "%d", page);
